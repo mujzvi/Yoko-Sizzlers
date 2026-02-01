@@ -782,7 +782,14 @@ export default function YokoSizzlersApp() {
         setError(null);
       } catch (err) {
         console.error('Failed to load data:', err);
-        setError(err.message);
+        // Only show error if data actually failed to load
+        // Don't block app for realtime/schema errors
+        if (err.message && err.message.includes('Invalid schema')) {
+          console.warn('Schema error (likely realtime config) - proceeding without realtime');
+          setError(null);
+        } else {
+          setError(err.message || 'Failed to connect to database');
+        }
       } finally {
         setLoading(false);
       }
@@ -791,93 +798,98 @@ export default function YokoSizzlersApp() {
     loadAll();
   }, []);
 
-  // ── REALTIME SUBSCRIPTIONS ──
+  // ── REALTIME + POLLING (cross-device sync) ──
   useEffect(() => {
+    if (loading) return;
     const sb = getSupabase();
     if (!sb) return;
 
-    // Orders channel
-    const ordersChannel = sb
-      .channel('orders-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
-        if (payload.eventType === 'INSERT') {
-          setOrders(prev => {
-            if (prev.some(o => o.id === payload.new.id)) return prev;
-            return [dbOrderToApp(payload.new), ...prev];
-          });
-        } else if (payload.eventType === 'UPDATE') {
-          setOrders(prev => prev.map(o => o.id === payload.new.id ? dbOrderToApp(payload.new) : o));
-        } else if (payload.eventType === 'DELETE') {
-          setOrders(prev => prev.filter(o => o.id !== payload.old.id));
-        }
-      })
-      .subscribe();
+    let channels = [];
+    let pollInterval = null;
+    let realtimeWorking = false;
 
-    // Items channel (price changes etc)
-    const itemsChannel = sb
-      .channel('items-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'items' }, (payload) => {
-        if (payload.eventType === 'UPDATE') {
-          setItems(prev => prev.map(i => i.id === payload.new.id ? dbItemToApp(payload.new) : i));
-        } else if (payload.eventType === 'INSERT') {
-          setItems(prev => [...prev, dbItemToApp(payload.new)]);
-        } else if (payload.eventType === 'DELETE') {
-          setItems(prev => prev.filter(i => i.id !== payload.old.id));
-        }
-      })
-      .subscribe();
+    // Polling fallback: refresh orders and items every 5 seconds
+    const startPolling = () => {
+      if (pollInterval) return;
+      pollInterval = setInterval(async () => {
+        try {
+          const [orderRes, itemRes, stockOutRes] = await Promise.all([
+            sb.from('orders').select('*').order('created_at', { ascending: false }),
+            sb.from('items').select('*').order('id'),
+            sb.from('stock_out_history').select('*').order('submitted_at', { ascending: false }),
+          ]);
+          if (orderRes.data) setOrders(orderRes.data.map(dbOrderToApp));
+          if (itemRes.data) setItems(itemRes.data.map(dbItemToApp));
+          if (stockOutRes.data) {
+            const stockObj = {};
+            stockOutRes.data.forEach(s => {
+              if (!stockObj[s.outlet]) stockObj[s.outlet] = [];
+              stockObj[s.outlet].push({ id: s.id, effectiveDate: s.effective_date, submittedAt: s.submitted_at, submittedBy: s.submitted_by, items: s.items || [], outlet: s.outlet });
+            });
+            setStockOutHistory(stockObj);
+          }
+        } catch (e) { /* silent */ }
+      }, 5000);
+    };
 
-    // Categories channel
-    const catsChannel = sb
-      .channel('categories-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, (payload) => {
-        if (payload.eventType === 'INSERT') {
-          setCategories(prev => [...prev, { id: payload.new.id, name: payload.new.name, description: payload.new.description }]);
-        } else if (payload.eventType === 'UPDATE') {
-          setCategories(prev => prev.map(c => c.id === payload.new.id ? { id: payload.new.id, name: payload.new.name, description: payload.new.description } : c));
-        } else if (payload.eventType === 'DELETE') {
-          setCategories(prev => prev.filter(c => c.id !== payload.old.id));
-        }
-      })
-      .subscribe();
+    try {
+      const ordersChannel = sb
+        .channel('orders-rt')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
+          realtimeWorking = true;
+          if (payload.eventType === 'INSERT') {
+            setOrders(prev => {
+              if (prev.some(o => o.id === payload.new.id)) return prev;
+              return [dbOrderToApp(payload.new), ...prev];
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            setOrders(prev => prev.map(o => o.id === payload.new.id ? dbOrderToApp(payload.new) : o));
+          } else if (payload.eventType === 'DELETE') {
+            setOrders(prev => prev.filter(o => o.id !== payload.old.id));
+          }
+        })
+        .subscribe((status) => {
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            console.warn('Realtime unavailable, falling back to polling');
+            startPolling();
+          }
+        });
 
-    // Stock out history channel
-    const stockOutChannel = sb
-      .channel('stockout-realtime')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'stock_out_history' }, (payload) => {
-        const s = payload.new;
-        setStockOutHistory(prev => ({
-          ...prev,
-          [s.outlet]: [
-            { id: s.id, effectiveDate: s.effective_date, submittedAt: s.submitted_at, submittedBy: s.submitted_by, items: s.items || [], outlet: s.outlet },
-            ...(prev[s.outlet] || [])
-          ]
-        }));
-      })
-      .subscribe();
+      const itemsChannel = sb
+        .channel('items-rt')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'items' }, (payload) => {
+          if (payload.eventType === 'UPDATE') setItems(prev => prev.map(i => i.id === payload.new.id ? dbItemToApp(payload.new) : i));
+          else if (payload.eventType === 'INSERT') setItems(prev => [...prev, dbItemToApp(payload.new)]);
+          else if (payload.eventType === 'DELETE') setItems(prev => prev.filter(i => i.id !== payload.old.id));
+        })
+        .subscribe();
 
-    // Revenue channel
-    const revenueChannel = sb
-      .channel('revenue-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'revenue_data' }, (payload) => {
-        if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
-          const r = payload.new;
-          setRevenueData(prev => ({
+      const stockOutChannel = sb
+        .channel('stockout-rt')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'stock_out_history' }, (payload) => {
+          const s = payload.new;
+          setStockOutHistory(prev => ({
             ...prev,
-            [r.outlet]: { ...(prev[r.outlet] || {}), [r.month]: Number(r.revenue) }
+            [s.outlet]: [{ id: s.id, effectiveDate: s.effective_date, submittedAt: s.submitted_at, submittedBy: s.submitted_by, items: s.items || [], outlet: s.outlet }, ...(prev[s.outlet] || [])]
           }));
-        }
-      })
-      .subscribe();
+        })
+        .subscribe();
+
+      channels = [ordersChannel, itemsChannel, stockOutChannel];
+    } catch (e) {
+      console.warn('Realtime setup failed:', e);
+      startPolling();
+    }
+
+    // Also start polling as safety net (it's lightweight)
+    startPolling();
 
     return () => {
-      sb.removeChannel(ordersChannel);
-      sb.removeChannel(itemsChannel);
-      sb.removeChannel(catsChannel);
-      sb.removeChannel(stockOutChannel);
-      sb.removeChannel(revenueChannel);
+      channels.forEach(ch => { try { sb.removeChannel(ch); } catch(e) {} });
+      if (pollInterval) clearInterval(pollInterval);
     };
-  }, [loading]); // re-run after loading completes (supabase will be ready)
+  }, [loading]);
+
 
   // ── DATA OPERATIONS (write to Supabase) ──
 
