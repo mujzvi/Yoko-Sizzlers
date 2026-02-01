@@ -8,7 +8,16 @@ import { createClient } from '@supabase/supabase-js';
 // Supabase Client
 const SUPABASE_URL = 'https://rrmscslchpjpatcdimtv.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJybXNjc2xjaHBqcGF0Y2RpbXR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5NzQxMzUsImV4cCI6MjA4NTU1MDEzNX0.tJAgiO6_yp2yTQbCEEYhaCbA0O6aG0cZsodbGBnGX5w';
-const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  global: {
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      'Accept-Profile': 'public',
+      'Content-Profile': 'public',
+    },
+  },
+});
 const getSupabase = () => supabaseClient;
 
 // Global Animation Styles Component
