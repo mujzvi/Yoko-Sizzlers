@@ -1,24 +1,99 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { createClient } from '@supabase/supabase-js';
 
 // ============================================
 // YOKO SIZZLERS PURCHASE ORDER SYSTEM
 // ============================================
 
-// Supabase Client
+// Supabase REST API (direct fetch - bypasses client library 406 issues)
 const SUPABASE_URL = 'https://rrmscslchpjpatcdimtv.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJybXNjc2xjaHBqcGF0Y2RpbXR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5NzQxMzUsImV4cCI6MjA4NTU1MDEzNX0.tJAgiO6_yp2yTQbCEEYhaCbA0O6aG0cZsodbGBnGX5w';
-const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  global: {
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json',
-      'Accept-Profile': 'public',
-      'Content-Profile': 'public',
-    },
+const REST_URL = `${SUPABASE_URL}/rest/v1`;
+
+const supaHeaders = {
+  'apikey': SUPABASE_ANON_KEY,
+  'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+  'Content-Type': 'application/json',
+  'Prefer': 'return=representation',
+};
+
+// Simple REST wrapper that mimics Supabase client API
+const supaRest = {
+  async select(table, options = {}) {
+    let url = `${REST_URL}/${table}?select=*`;
+    if (options.order) {
+      url += `&order=${options.order}.${options.ascending === false ? 'desc' : 'asc'}`;
+    }
+    if (options.eq) {
+      Object.entries(options.eq).forEach(([col, val]) => {
+        url += `&${col}=eq.${encodeURIComponent(val)}`;
+      });
+    }
+    const res = await fetch(url, { headers: { ...supaHeaders, 'Accept': 'application/json' } });
+    if (!res.ok) throw new Error(`Select ${table} failed: ${res.status} ${res.statusText}`);
+    return await res.json();
   },
-});
-const getSupabase = () => supabaseClient;
+  
+  async insert(table, rows) {
+    const body = Array.isArray(rows) ? rows : [rows];
+    const res = await fetch(`${REST_URL}/${table}`, {
+      method: 'POST',
+      headers: { ...supaHeaders, 'Accept': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`Insert ${table} failed: ${res.status} ${err}`);
+    }
+    return await res.json();
+  },
+  
+  async update(table, updates, eq) {
+    let url = `${REST_URL}/${table}`;
+    const params = Object.entries(eq).map(([col, val]) => `${col}=eq.${encodeURIComponent(val)}`).join('&');
+    url += `?${params}`;
+    const res = await fetch(url, {
+      method: 'PATCH',
+      headers: { ...supaHeaders, 'Accept': 'application/json' },
+      body: JSON.stringify(updates),
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`Update ${table} failed: ${res.status} ${err}`);
+    }
+    return await res.json();
+  },
+  
+  async upsert(table, rows, onConflict) {
+    const body = Array.isArray(rows) ? rows : [rows];
+    let url = `${REST_URL}/${table}`;
+    if (onConflict) url += `?on_conflict=${onConflict}`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { ...supaHeaders, 'Accept': 'application/json', 'Prefer': 'return=representation,resolution=merge-duplicates' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`Upsert ${table} failed: ${res.status} ${err}`);
+    }
+    return await res.json();
+  },
+
+  async selectSingle(table, eq) {
+    let url = `${REST_URL}/${table}?select=*`;
+    Object.entries(eq).forEach(([col, val]) => {
+      url += `&${col}=eq.${encodeURIComponent(val)}`;
+    });
+    url += '&limit=1';
+    const res = await fetch(url, { headers: { ...supaHeaders, 'Accept': 'application/json' } });
+    if (!res.ok) throw new Error(`SelectSingle ${table} failed: ${res.status}`);
+    const data = await res.json();
+    return data[0] || null;
+  },
+};
+
+// Dummy getSupabase for realtime (we'll use polling instead)
+const getSupabase = () => null;
 
 // Global Animation Styles Component
 function GlobalStyles() {
@@ -728,40 +803,32 @@ export default function YokoSizzlersApp() {
       try {
         setLoading(true);
         
-        const sb = getSupabase();
+        const sb = supaRest;
 
-        const [catRes, itemRes, orderRes, userRes, revRes, counterRes, stockOutRes] = await Promise.all([
-          sb.from('categories').select('*').order('id'),
-          sb.from('items').select('*').order('id'),
-          sb.from('orders').select('*').order('created_at', { ascending: false }),
-          sb.from('users').select('*'),
-          sb.from('revenue_data').select('*'),
-          sb.from('order_counters').select('*'),
-          sb.from('stock_out_history').select('*').order('submitted_at', { ascending: false }),
+        const [catData, itemData, orderData, userData, revData, counterData, stockOutData] = await Promise.all([
+          sb.select('categories', { order: 'id', ascending: true }),
+          sb.select('items', { order: 'id', ascending: true }),
+          sb.select('orders', { order: 'created_at', ascending: false }),
+          sb.select('users'),
+          sb.select('revenue_data'),
+          sb.select('order_counters'),
+          sb.select('stock_out_history', { order: 'submitted_at', ascending: false }),
         ]);
 
-        if (catRes.error) throw catRes.error;
-        if (itemRes.error) throw itemRes.error;
-        if (orderRes.error) throw orderRes.error;
-        if (userRes.error) throw userRes.error;
-        if (revRes.error) throw revRes.error;
-        if (counterRes.error) throw counterRes.error;
-        if (stockOutRes.error) throw stockOutRes.error;
-
-        setCategories(catRes.data.map(c => ({ id: c.id, name: c.name, description: c.description })));
-        setItems(itemRes.data.map(dbItemToApp));
-        setOrders(orderRes.data.map(dbOrderToApp));
+        setCategories(catData.map(c => ({ id: c.id, name: c.name, description: c.description })));
+        setItems(itemData.map(dbItemToApp));
+        setOrders(orderData.map(dbOrderToApp));
 
         // Users: convert array to phone-keyed object
         const usersObj = {};
-        userRes.data.forEach(u => {
+        userData.forEach(u => {
           usersObj[u.phone] = { role: u.role, outlet: u.outlet, name: u.name };
         });
         setUsers(usersObj);
 
         // Revenue: convert to nested object { outlet: { month: revenue } }
         const revObj = {};
-        revRes.data.forEach(r => {
+        revData.forEach(r => {
           if (!revObj[r.outlet]) revObj[r.outlet] = {};
           revObj[r.outlet][r.month] = Number(r.revenue);
         });
@@ -769,12 +836,12 @@ export default function YokoSizzlersApp() {
 
         // Counters
         const counterObj = {};
-        counterRes.data.forEach(c => { counterObj[c.outlet] = c.counter; });
+        counterData.forEach(c => { counterObj[c.outlet] = c.counter; });
         setOrderCounters(counterObj);
 
         // Stock out history: group by outlet
         const stockObj = {};
-        stockOutRes.data.forEach(s => {
+        stockOutData.forEach(s => {
           const outlet = s.outlet;
           if (!stockObj[outlet]) stockObj[outlet] = [];
           stockObj[outlet].push({
@@ -813,90 +880,28 @@ export default function YokoSizzlersApp() {
     const sb = getSupabase();
     if (!sb) return;
 
-    let channels = [];
-    let pollInterval = null;
-    let realtimeWorking = false;
+    // Polling: refresh orders, items, and stock-out every 5 seconds
+    const pollInterval = setInterval(async () => {
+      try {
+        const [orderData, itemData, stockOutData] = await Promise.all([
+          supaRest.select('orders', { order: 'created_at', ascending: false }),
+          supaRest.select('items', { order: 'id', ascending: true }),
+          supaRest.select('stock_out_history', { order: 'submitted_at', ascending: false }),
+        ]);
+        if (orderData) setOrders(orderData.map(dbOrderToApp));
+        if (itemData) setItems(itemData.map(dbItemToApp));
+        if (stockOutData) {
+          const stockObj = {};
+          stockOutData.forEach(s => {
+            if (!stockObj[s.outlet]) stockObj[s.outlet] = [];
+            stockObj[s.outlet].push({ id: s.id, effectiveDate: s.effective_date, submittedAt: s.submitted_at, submittedBy: s.submitted_by, items: s.items || [], outlet: s.outlet });
+          });
+          setStockOutHistory(stockObj);
+        }
+      } catch (e) { /* silent */ }
+    }, 5000);
 
-    // Polling fallback: refresh orders and items every 5 seconds
-    const startPolling = () => {
-      if (pollInterval) return;
-      pollInterval = setInterval(async () => {
-        try {
-          const [orderRes, itemRes, stockOutRes] = await Promise.all([
-            sb.from('orders').select('*').order('created_at', { ascending: false }),
-            sb.from('items').select('*').order('id'),
-            sb.from('stock_out_history').select('*').order('submitted_at', { ascending: false }),
-          ]);
-          if (orderRes.data) setOrders(orderRes.data.map(dbOrderToApp));
-          if (itemRes.data) setItems(itemRes.data.map(dbItemToApp));
-          if (stockOutRes.data) {
-            const stockObj = {};
-            stockOutRes.data.forEach(s => {
-              if (!stockObj[s.outlet]) stockObj[s.outlet] = [];
-              stockObj[s.outlet].push({ id: s.id, effectiveDate: s.effective_date, submittedAt: s.submitted_at, submittedBy: s.submitted_by, items: s.items || [], outlet: s.outlet });
-            });
-            setStockOutHistory(stockObj);
-          }
-        } catch (e) { /* silent */ }
-      }, 5000);
-    };
-
-    try {
-      const ordersChannel = sb
-        .channel('orders-rt')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
-          realtimeWorking = true;
-          if (payload.eventType === 'INSERT') {
-            setOrders(prev => {
-              if (prev.some(o => o.id === payload.new.id)) return prev;
-              return [dbOrderToApp(payload.new), ...prev];
-            });
-          } else if (payload.eventType === 'UPDATE') {
-            setOrders(prev => prev.map(o => o.id === payload.new.id ? dbOrderToApp(payload.new) : o));
-          } else if (payload.eventType === 'DELETE') {
-            setOrders(prev => prev.filter(o => o.id !== payload.old.id));
-          }
-        })
-        .subscribe((status) => {
-          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-            console.warn('Realtime unavailable, falling back to polling');
-            startPolling();
-          }
-        });
-
-      const itemsChannel = sb
-        .channel('items-rt')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'items' }, (payload) => {
-          if (payload.eventType === 'UPDATE') setItems(prev => prev.map(i => i.id === payload.new.id ? dbItemToApp(payload.new) : i));
-          else if (payload.eventType === 'INSERT') setItems(prev => [...prev, dbItemToApp(payload.new)]);
-          else if (payload.eventType === 'DELETE') setItems(prev => prev.filter(i => i.id !== payload.old.id));
-        })
-        .subscribe();
-
-      const stockOutChannel = sb
-        .channel('stockout-rt')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'stock_out_history' }, (payload) => {
-          const s = payload.new;
-          setStockOutHistory(prev => ({
-            ...prev,
-            [s.outlet]: [{ id: s.id, effectiveDate: s.effective_date, submittedAt: s.submitted_at, submittedBy: s.submitted_by, items: s.items || [], outlet: s.outlet }, ...(prev[s.outlet] || [])]
-          }));
-        })
-        .subscribe();
-
-      channels = [ordersChannel, itemsChannel, stockOutChannel];
-    } catch (e) {
-      console.warn('Realtime setup failed:', e);
-      startPolling();
-    }
-
-    // Also start polling as safety net (it's lightweight)
-    startPolling();
-
-    return () => {
-      channels.forEach(ch => { try { sb.removeChannel(ch); } catch(e) {} });
-      if (pollInterval) clearInterval(pollInterval);
-    };
+    return () => { clearInterval(pollInterval); };
   }, [loading]);
 
 
@@ -929,8 +934,9 @@ export default function YokoSizzlersApp() {
       last_updated: item.lastUpdated || null,
     }));
     
-    const { error } = await getSupabase().from('items').upsert(rows, { onConflict: 'id' });
-    if (error) console.error('Update items error:', error);
+    try {
+      await supaRest.upsert('items', rows, 'id');
+    } catch (e) { console.error('Update items error:', e); }
     // Realtime subscription will update local state
     // But also update immediately for responsiveness
     setItems(newItems);
@@ -945,8 +951,9 @@ export default function YokoSizzlersApp() {
       });
     });
     
-    const { error } = await getSupabase().from('revenue_data').upsert(rows, { onConflict: 'outlet,month' });
-    if (error) console.error('Update revenue error:', error);
+    try {
+      await supaRest.upsert('revenue_data', rows, 'outlet,month');
+    } catch (e) { console.error('Update revenue error:', e); }
     setRevenueData(newRevenueData);
   };
 
@@ -954,12 +961,14 @@ export default function YokoSizzlersApp() {
     // Find new categories (no id or high id) to insert, existing to update
     for (const cat of newCategories) {
       const row = { name: cat.name, description: cat.description || '' };
-      if (cat.id) {
-        await getSupabase().from('categories').upsert({ id: cat.id, ...row }, { onConflict: 'id' });
-      } else {
-        const { data } = await getSupabase().from('categories').insert(row).select();
-        if (data && data[0]) cat.id = data[0].id;
-      }
+      try {
+        if (cat.id) {
+          await supaRest.upsert('categories', { id: cat.id, ...row }, 'id');
+        } else {
+          const data = await supaRest.insert('categories', row);
+          if (data && data[0]) cat.id = data[0].id;
+        }
+      } catch (e) { console.error('Update category error:', e); }
     }
     setCategories(newCategories);
   };
@@ -974,8 +983,9 @@ export default function YokoSizzlersApp() {
       items: entry.items,
     };
     
-    const { error } = await getSupabase().from('stock_out_history').insert(row);
-    if (error) console.error('Stock out insert error:', error);
+    try {
+      await supaRest.insert('stock_out_history', row);
+    } catch (e) { console.error('Stock out insert error:', e); }
     // Realtime will handle the state update, but also update immediately
     setStockOutHistory(prev => ({
       ...prev,
@@ -989,20 +999,13 @@ export default function YokoSizzlersApp() {
     const prefix = prefixMap[order.outlet] || 'YX';
     
     // Fetch current counter
-    const { data: counterData } = await getSupabase()
-      .from('order_counters')
-      .select('counter')
-      .eq('outlet', order.outlet)
-      .single();
+    const counterRow = await supaRest.selectSingle('order_counters', { outlet: order.outlet });
     
-    const newCounter = (counterData?.counter || 0) + 1;
+    const newCounter = (counterRow?.counter || 0) + 1;
     const orderId = `${prefix}${String(newCounter).padStart(4, '0')}`;
     
     // Update counter
-    await getSupabase()
-      .from('order_counters')
-      .update({ counter: newCounter })
-      .eq('outlet', order.outlet);
+    await supaRest.update('order_counters', { counter: newCounter }, { outlet: order.outlet });
     
     // Insert order
     const row = {
@@ -1017,9 +1020,12 @@ export default function YokoSizzlersApp() {
       requested_items: order.requestedItems || null,
     };
     
-    const { error } = await getSupabase().from('orders').insert(row);
-    if (error) console.error('Insert order error:', error);
-    // Realtime will add it to state
+    try {
+      await supaRest.insert('orders', row);
+    } catch (e) { console.error('Insert order error:', e); }
+    // Polling will pick up the new order
+    // Also add locally for immediate feedback
+    setOrders(prev => [{ ...order, id: orderId }, ...prev]);
   };
 
   const updateOrderStatus = async (orderId, status, additionalData = {}) => {
@@ -1031,9 +1037,9 @@ export default function YokoSizzlersApp() {
     if (additionalData.completedAt) updates.completed_at = additionalData.completedAt;
     if (additionalData.dispute) updates.dispute = additionalData.dispute;
     
-    const { error } = await getSupabase().from('orders').update(updates).eq('id', orderId);
-    if (error) console.error('Update order status error:', error);
-    // Also update local state immediately for responsiveness
+    try {
+      await supaRest.update('orders', updates, { id: orderId });
+    } catch (e) { console.error('Update order status error:', e); }
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status, ...additionalData } : o));
   };
 
@@ -1051,8 +1057,9 @@ export default function YokoSizzlersApp() {
     if (appUpdates.dispute !== undefined) dbUpdates.dispute = appUpdates.dispute;
     if (appUpdates.requestedItems !== undefined) dbUpdates.requested_items = appUpdates.requestedItems;
     
-    const { error } = await getSupabase().from('orders').update(dbUpdates).eq('id', orderId);
-    if (error) console.error('Update order error:', error);
+    try {
+      await supaRest.update('orders', dbUpdates, { id: orderId });
+    } catch (e) { console.error('Update order error:', e); }
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...appUpdates } : o));
   };
 
