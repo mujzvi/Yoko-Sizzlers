@@ -29,7 +29,7 @@ const supaRest = {
       });
     }
     const res = await fetch(url, { headers: { ...supaHeaders, 'Accept': 'application/json' } });
-    if (!res.ok) throw new Error(`Select ${table} failed: ${res.status} ${res.statusText}`);
+    if (!res.ok) throw new Error(`Select ${table} failed: ${res.status}`);
     return await res.json();
   },
   
@@ -40,10 +40,7 @@ const supaRest = {
       headers: { ...supaHeaders, 'Accept': 'application/json' },
       body: JSON.stringify(body),
     });
-    if (!res.ok) {
-      const err = await res.text();
-      throw new Error(`Insert ${table} failed: ${res.status} ${err}`);
-    }
+    if (!res.ok) throw new Error(`Insert ${table} failed: ${res.status}`);
     return await res.json();
   },
   
@@ -56,10 +53,7 @@ const supaRest = {
       headers: { ...supaHeaders, 'Accept': 'application/json' },
       body: JSON.stringify(updates),
     });
-    if (!res.ok) {
-      const err = await res.text();
-      throw new Error(`Update ${table} failed: ${res.status} ${err}`);
-    }
+    if (!res.ok) throw new Error(`Update ${table} failed: ${res.status}`);
     return await res.json();
   },
   
@@ -72,27 +66,12 @@ const supaRest = {
       headers: { ...supaHeaders, 'Accept': 'application/json', 'Prefer': 'return=representation,resolution=merge-duplicates' },
       body: JSON.stringify(body),
     });
-    if (!res.ok) {
-      const err = await res.text();
-      throw new Error(`Upsert ${table} failed: ${res.status} ${err}`);
-    }
+    if (!res.ok) throw new Error(`Upsert ${table} failed: ${res.status}`);
     return await res.json();
-  },
-
-  async selectSingle(table, eq) {
-    let url = `${REST_URL}/${table}?select=*`;
-    Object.entries(eq).forEach(([col, val]) => {
-      url += `&${col}=eq.${encodeURIComponent(val)}`;
-    });
-    url += '&limit=1';
-    const res = await fetch(url, { headers: { ...supaHeaders, 'Accept': 'application/json' } });
-    if (!res.ok) throw new Error(`SelectSingle ${table} failed: ${res.status}`);
-    const data = await res.json();
-    return data[0] || null;
   },
 };
 
-// Dummy getSupabase for realtime (we'll use polling instead)
+// Dummy getSupabase for compatibility
 const getSupabase = () => null;
 
 // Global Animation Styles Component
@@ -804,16 +783,15 @@ export default function YokoSizzlersApp() {
       try {
         setLoading(true);
         
-        const sb = supaRest;
-
+        // Load data via REST API
         const [catData, itemData, orderData, userData, revData, counterData, stockOutData] = await Promise.all([
-          sb.select('categories', { order: 'id', ascending: true }),
-          sb.select('items', { order: 'id', ascending: true }),
-          sb.select('orders', { order: 'created_at', ascending: false }),
-          sb.select('users'),
-          sb.select('revenue_data'),
-          sb.select('order_counters'),
-          sb.select('stock_out_history', { order: 'submitted_at', ascending: false }),
+          supaRest.select('categories', { order: 'id' }),
+          supaRest.select('items', { order: 'id' }),
+          supaRest.select('orders', { order: 'created_at', ascending: false }),
+          supaRest.select('users'),
+          supaRest.select('revenue_data'),
+          supaRest.select('order_counters'),
+          supaRest.select('stock_out_history', { order: 'submitted_at', ascending: false }),
         ]);
 
         setCategories(catData.map(c => ({ id: c.id, name: c.name, description: c.description })));
@@ -859,14 +837,7 @@ export default function YokoSizzlersApp() {
         setError(null);
       } catch (err) {
         console.error('Failed to load data:', err);
-        // Only show error if data actually failed to load
-        // Don't block app for realtime/schema errors
-        if (err.message && err.message.includes('Invalid schema')) {
-          console.warn('Schema error (likely realtime config) - proceeding without realtime');
-          setError(null);
-        } else {
-          setError(err.message || 'Failed to connect to database');
-        }
+        setError(err.message);
       } finally {
         setLoading(false);
       }
@@ -875,38 +846,33 @@ export default function YokoSizzlersApp() {
     loadAll();
   }, []);
 
-  // ── REALTIME + POLLING (cross-device sync) ──
+  // ── POLLING FOR REALTIME (replaces broken Supabase realtime) ──
   useEffect(() => {
-    if (loading) return;
-    const sb = getSupabase();
-    if (!sb) return;
-
-    // Polling: refresh orders, items, and stock-out every 5 seconds
     const pollInterval = setInterval(async () => {
       try {
         const [orderData, itemData, stockOutData] = await Promise.all([
           supaRest.select('orders', { order: 'created_at', ascending: false }),
-          supaRest.select('items', { order: 'id', ascending: true }),
+          supaRest.select('items', { order: 'id' }),
           supaRest.select('stock_out_history', { order: 'submitted_at', ascending: false }),
         ]);
-        if (orderData) setOrders(orderData.map(dbOrderToApp));
-        if (itemData) setItems(itemData.map(dbItemToApp));
-        if (stockOutData) {
-          const stockObj = {};
-          stockOutData.forEach(s => {
-            if (!stockObj[s.outlet]) stockObj[s.outlet] = [];
-            stockObj[s.outlet].push({ id: s.id, effectiveDate: s.effective_date, submittedAt: s.submitted_at, submittedBy: s.submitted_by, items: s.items || [], outlet: s.outlet });
+        setOrders(orderData.map(dbOrderToApp));
+        setItems(itemData.map(dbItemToApp));
+        
+        const stockObj = {};
+        stockOutData.forEach(s => {
+          if (!stockObj[s.outlet]) stockObj[s.outlet] = [];
+          stockObj[s.outlet].push({
+            id: s.id, effectiveDate: s.effective_date, submittedAt: s.submitted_at,
+            submittedBy: s.submitted_by, items: s.items || [], outlet: s.outlet,
           });
-          setStockOutHistory(stockObj);
-        }
-      } catch (e) { /* silent */ }
+        });
+        setStockOutHistory(stockObj);
+      } catch (e) { console.error('Poll error:', e); }
     }, 5000);
+    return () => clearInterval(pollInterval);
+  }, []);
 
-    return () => { clearInterval(pollInterval); };
-  }, [loading]);
-
-
-  // ── DATA OPERATIONS (write to Supabase) ──
+  // ── DATA OPERATIONS (write to Supabase via REST) ──
 
   const handleLogin = (phone, user) => {
     setCurrentUser({ phone, ...user });
@@ -936,11 +902,10 @@ export default function YokoSizzlersApp() {
       updated_by: item.updatedBy || null,
     }));
     
+    const { error } = await getSupabase().from('items').upsert(rows, { onConflict: 'id' });
     try {
       await supaRest.upsert('items', rows, 'id');
     } catch (e) { console.error('Update items error:', e); }
-    // Realtime subscription will update local state
-    // But also update immediately for responsiveness
     setItems(newItems);
   };
 
@@ -970,7 +935,7 @@ export default function YokoSizzlersApp() {
           const data = await supaRest.insert('categories', row);
           if (data && data[0]) cat.id = data[0].id;
         }
-      } catch (e) { console.error('Update category error:', e); }
+      } catch (e) { console.error('Update categories error:', e); }
     }
     setCategories(newCategories);
   };
@@ -988,7 +953,6 @@ export default function YokoSizzlersApp() {
     try {
       await supaRest.insert('stock_out_history', row);
     } catch (e) { console.error('Stock out insert error:', e); }
-    // Realtime will handle the state update, but also update immediately
     setStockOutHistory(prev => ({
       ...prev,
       [outlet]: [{ ...entry, outlet }, ...(prev[outlet] || [])]
@@ -1001,13 +965,14 @@ export default function YokoSizzlersApp() {
     const prefix = prefixMap[order.outlet] || 'YX';
     
     // Fetch current counter
-    const counterRow = await supaRest.selectSingle('order_counters', { outlet: order.outlet });
-    
-    const newCounter = (counterRow?.counter || 0) + 1;
+    const counterData = await supaRest.select('order_counters', { eq: { outlet: order.outlet } });
+    const newCounter = (counterData?.[0]?.counter || 0) + 1;
     const orderId = `${prefix}${String(newCounter).padStart(4, '0')}`;
     
     // Update counter
-    await supaRest.update('order_counters', { counter: newCounter }, { outlet: order.outlet });
+    try {
+      await supaRest.update('order_counters', { counter: newCounter }, { outlet: order.outlet });
+    } catch (e) { console.error('Update counter error:', e); }
     
     // Insert order
     const row = {
@@ -1025,9 +990,6 @@ export default function YokoSizzlersApp() {
     try {
       await supaRest.insert('orders', row);
     } catch (e) { console.error('Insert order error:', e); }
-    // Polling will pick up the new order
-    // Also add locally for immediate feedback
-    setOrders(prev => [{ ...order, id: orderId }, ...prev]);
   };
 
   const updateOrderStatus = async (orderId, status, additionalData = {}) => {
@@ -1319,6 +1281,10 @@ function OutletDashboard({ user, items, categories, orders, onAddOrder, onUpdate
   const [lastOrderId, setLastOrderId] = useState(null);
   const [showAISuggestions, setShowAISuggestions] = useState(true);
   
+  // Invoice Search state
+  const [invoiceSearchQuery, setInvoiceSearchQuery] = useState('');
+  const [invoiceSearchResults, setInvoiceSearchResults] = useState([]);
+  
   // Dispute state
   const [disputingOrder, setDisputingOrder] = useState(null);
   const [disputeItems, setDisputeItems] = useState({});
@@ -1379,10 +1345,6 @@ function OutletDashboard({ user, items, categories, orders, onAddOrder, onUpdate
 
   const [stockHistoryMonth, setStockHistoryMonth] = useState(new Date().getMonth() + 1);
   const [stockHistoryYear, setStockHistoryYear] = useState(new Date().getFullYear());
-  
-  // Invoice Search state
-  const [invoiceSearchQuery, setInvoiceSearchQuery] = useState('');
-  const [invoiceSearchResults, setInvoiceSearchResults] = useState([]);
 
   useEffect(() => {
     localStorage.setItem(`yokoStock_${user.outlet}`, JSON.stringify(stockData));
@@ -2939,6 +2901,19 @@ function CentralKitchenDashboard({ user, items, categories, orders, revenueData,
   const [showVendorAlerts, setShowVendorAlerts] = useState(true);
   const [vendorPriceAlerts, setVendorPriceAlerts] = useState([]);
   
+  // Invoice Search state
+  const [invoiceSearchQuery, setInvoiceSearchQuery] = useState('');
+  const [invoiceSearchResults, setInvoiceSearchResults] = useState([]);
+  
+  // Stock Difference Report state
+  const [stockDiffPeriod, setStockDiffPeriod] = useState('today');
+  const [stockDiffOutlet, setStockDiffOutlet] = useState('All');
+  const [stockDiffItemFilter, setStockDiffItemFilter] = useState('');
+  
+  // Clickable summary state
+  const [summaryFilter, setSummaryFilter] = useState(null);
+  const [expandedOutlet, setExpandedOutlet] = useState(null);
+  
   // Load vendor alerts on mount (simulated weekly check)
   useEffect(() => {
     const alerts = AIAnalytics.compareVendorPrices(items);
@@ -2963,17 +2938,6 @@ function CentralKitchenDashboard({ user, items, categories, orders, revenueData,
   const [viewingOrderDetails, setViewingOrderDetails] = useState(null);
   const [itemSearchId, setItemSearchId] = useState('');
   const [itemSearchOutletView, setItemSearchOutletView] = useState('consolidated');
-  const [summaryFilter, setSummaryFilter] = useState(null); // 'all', 'pending', 'dispatched', 'delivered', 'disputed'
-  const [expandedOutlet, setExpandedOutlet] = useState(null); // outlet name or null
-  
-  // Stock Difference Report state
-  const [stockDiffPeriod, setStockDiffPeriod] = useState('today');
-  const [stockDiffOutlet, setStockDiffOutlet] = useState('All');
-  const [stockDiffItemFilter, setStockDiffItemFilter] = useState('');
-  
-  // Invoice Search state
-  const [invoiceSearchQuery, setInvoiceSearchQuery] = useState('');
-  const [invoiceSearchResults, setInvoiceSearchResults] = useState([]);
 
   const today = new Date();
   const currentMonth = today.getMonth() + 1;
@@ -3291,185 +3255,160 @@ function CentralKitchenDashboard({ user, items, categories, orders, revenueData,
             <h3 className="text-lg font-semibold text-amber-400 mb-2 flex items-center gap-2">
               <span>📊</span> Today's Summary
             </h3>
-            <p className="text-sm text-stone-500 mb-4">Real-time overview of today's orders • Click cards to filter</p>
+            <p className="text-sm text-stone-500 mb-4">Click a status to filter outlet orders below</p>
             
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-              {[
-                { key: 'all', label: 'Total Orders', value: todayOrders.length, color: 'blue', filter: () => todayOrders },
-                { key: 'value', label: 'Total Value', value: formatCurrency(todayOrders.reduce((s, o) => s + o.totalAmount, 0)), color: 'emerald', filter: () => todayOrders },
-                { key: 'pending', label: 'Pending', value: todayOrders.filter(o => o.status === 'pending').length, color: 'yellow', filter: () => todayOrders.filter(o => o.status === 'pending') },
-                { key: 'dispatched', label: 'Dispatched', value: todayOrders.filter(o => o.status === 'dispatched').length, color: 'blue', filter: () => todayOrders.filter(o => o.status === 'dispatched') },
-                { key: 'delivered', label: 'Delivered', value: todayOrders.filter(o => o.status === 'delivered' || o.status === 'completed').length, color: 'purple', filter: () => todayOrders.filter(o => o.status === 'delivered' || o.status === 'completed') },
-                { key: 'disputed', label: 'Disputed', value: todayOrders.filter(o => o.status === 'disputed').length, color: 'red', filter: () => todayOrders.filter(o => o.status === 'disputed') },
-              ].map(card => (
-                <div
-                  key={card.key}
-                  onClick={() => setSummaryFilter(summaryFilter === card.key ? null : card.key)}
-                  className={`bg-stone-800/30 rounded-xl p-4 text-center cursor-pointer transition-all hover:bg-stone-800/60 active:scale-95 border-2 ${
-                    summaryFilter === card.key ? `border-${card.color}-400 shadow-lg shadow-${card.color}-500/20` : 'border-transparent'
-                  }`}
-                >
-                  <p className={`text-3xl font-bold text-${card.color}-400`}>{card.value}</p>
-                  <p className="text-sm text-stone-400 mt-1">{card.label}</p>
-                  {summaryFilter === card.key && <p className="text-xs text-amber-400 mt-1">▼ Showing below</p>}
-                </div>
-              ))}
+              <div 
+                onClick={() => setSummaryFilter(summaryFilter === 'all' ? null : 'all')}
+                className={`bg-stone-800/30 rounded-xl p-4 text-center cursor-pointer transition-all hover:bg-stone-800/50 ${summaryFilter === 'all' ? 'ring-2 ring-blue-500' : ''}`}
+              >
+                <p className="text-3xl font-bold text-blue-400">{todayOrders.length}</p>
+                <p className="text-sm text-stone-400 mt-1">Total Orders</p>
+              </div>
+              <div className="bg-stone-800/30 rounded-xl p-4 text-center">
+                <p className="text-3xl font-bold text-emerald-400">{formatCurrency(todayOrders.reduce((s, o) => s + o.totalAmount, 0))}</p>
+                <p className="text-sm text-stone-400 mt-1">Total Value</p>
+              </div>
+              <div 
+                onClick={() => setSummaryFilter(summaryFilter === 'pending' ? null : 'pending')}
+                className={`bg-stone-800/30 rounded-xl p-4 text-center cursor-pointer transition-all hover:bg-stone-800/50 ${summaryFilter === 'pending' ? 'ring-2 ring-yellow-500' : ''}`}
+              >
+                <p className="text-3xl font-bold text-yellow-400">{todayOrders.filter(o => o.status === 'pending').length}</p>
+                <p className="text-sm text-stone-400 mt-1">Pending</p>
+              </div>
+              <div 
+                onClick={() => setSummaryFilter(summaryFilter === 'dispatched' ? null : 'dispatched')}
+                className={`bg-stone-800/30 rounded-xl p-4 text-center cursor-pointer transition-all hover:bg-stone-800/50 ${summaryFilter === 'dispatched' ? 'ring-2 ring-blue-500' : ''}`}
+              >
+                <p className="text-3xl font-bold text-blue-400">{todayOrders.filter(o => o.status === 'dispatched').length}</p>
+                <p className="text-sm text-stone-400 mt-1">Dispatched</p>
+              </div>
+              <div 
+                onClick={() => setSummaryFilter(summaryFilter === 'delivered' ? null : 'delivered')}
+                className={`bg-stone-800/30 rounded-xl p-4 text-center cursor-pointer transition-all hover:bg-stone-800/50 ${summaryFilter === 'delivered' ? 'ring-2 ring-purple-500' : ''}`}
+              >
+                <p className="text-3xl font-bold text-purple-400">{todayOrders.filter(o => o.status === 'delivered' || o.status === 'completed').length}</p>
+                <p className="text-sm text-stone-400 mt-1">Delivered</p>
+              </div>
+              <div 
+                onClick={() => setSummaryFilter(summaryFilter === 'disputed' ? null : 'disputed')}
+                className={`bg-stone-800/30 rounded-xl p-4 text-center cursor-pointer transition-all hover:bg-stone-800/50 ${summaryFilter === 'disputed' ? 'ring-2 ring-red-500' : ''}`}
+              >
+                <p className="text-3xl font-bold text-red-400">{todayOrders.filter(o => o.status === 'disputed').length}</p>
+                <p className="text-sm text-stone-400 mt-1">Disputed</p>
+              </div>
             </div>
 
-            {/* Filtered Orders Detail */}
-            {summaryFilter && (() => {
-              const filterMap = {
-                all: todayOrders,
-                value: todayOrders,
-                pending: todayOrders.filter(o => o.status === 'pending'),
-                dispatched: todayOrders.filter(o => o.status === 'dispatched'),
-                delivered: todayOrders.filter(o => o.status === 'delivered' || o.status === 'completed'),
-                disputed: todayOrders.filter(o => o.status === 'disputed'),
-              };
-              const filtered = filterMap[summaryFilter] || [];
-              const statusLabels = { all: 'All', value: 'All', pending: 'Pending', dispatched: 'Dispatched', delivered: 'Delivered', disputed: 'Disputed' };
-              return (
-                <div className="mb-6 bg-stone-800/20 border border-stone-700/30 rounded-xl p-4 animate-modal-in">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-white font-medium">{statusLabels[summaryFilter]} Orders — {filtered.length} order{filtered.length !== 1 ? 's' : ''}</h4>
-                    <button onClick={() => setSummaryFilter(null)} className="text-xs text-stone-400 hover:text-white px-2 py-1 bg-stone-700 rounded-lg transition-all">✕ Close</button>
-                  </div>
-                  {filtered.length === 0 ? (
-                    <p className="text-stone-500 text-center py-4">No orders in this category</p>
-                  ) : (
-                    <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
-                      {filtered.map(order => (
-                        <div
-                          key={order.id}
-                          onClick={() => setReviewingOrder(order)}
-                          className="bg-stone-800/50 rounded-lg p-3 flex items-center justify-between hover:bg-stone-800/80 cursor-pointer transition-all active:scale-[0.99]"
-                        >
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-white font-medium text-sm">{order.id}</span>
-                              <span className="text-xs px-2 py-0.5 rounded-lg bg-stone-700 text-stone-300">{order.outlet}</span>
-                              <span className={`text-xs px-2 py-0.5 rounded-lg ${
-                                order.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
-                                order.status === 'dispatched' ? 'bg-blue-500/20 text-blue-400' :
-                                order.status === 'delivered' || order.status === 'completed' ? 'bg-emerald-500/20 text-emerald-400' :
-                                order.status === 'disputed' ? 'bg-red-500/20 text-red-400' : 'bg-stone-700 text-stone-400'
-                              }`}>{order.status}</span>
-                            </div>
-                            <p className="text-xs text-stone-500 mt-1">
-                              {order.items.length} item{order.items.length !== 1 ? 's' : ''} • {formatDate(order.createdAt)} • by {order.createdBy}
-                            </p>
-                          </div>
-                          <div className="text-right ml-3">
-                            <p className="text-amber-400 font-semibold">{formatCurrency(order.totalAmount)}</p>
-                            <p className="text-xs text-stone-500">tap to view →</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-
-            {/* Outlet Breakdown */}
+            {/* Outlet Breakdown - Clickable & Expandable */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {outlets.map(outlet => {
                 const outletTodayOrders = todayOrders.filter(o => o.outlet === outlet);
                 const outletTotal = outletTodayOrders.reduce((s, o) => s + o.totalAmount, 0);
                 const outletPending = outletTodayOrders.filter(o => o.status === 'pending').length;
                 const outletDispatched = outletTodayOrders.filter(o => o.status === 'dispatched').length;
-                const outletDelivered = outletTodayOrders.filter(o => o.status === 'delivered' || o.status === 'completed').length;
-                const outletDisputed = outletTodayOrders.filter(o => o.status === 'disputed').length;
                 const isExpanded = expandedOutlet === outlet;
+                
+                // Filter orders based on summaryFilter
+                const displayOrders = summaryFilter 
+                  ? outletTodayOrders.filter(o => {
+                      if (summaryFilter === 'pending') return o.status === 'pending';
+                      if (summaryFilter === 'dispatched') return o.status === 'dispatched';
+                      if (summaryFilter === 'delivered') return o.status === 'delivered' || o.status === 'completed';
+                      if (summaryFilter === 'disputed') return o.status === 'disputed';
+                      return true;
+                    })
+                  : outletTodayOrders;
+                
                 return (
-                  <div key={outlet} className={`bg-stone-800/20 border rounded-xl transition-all ${isExpanded ? 'border-amber-500/50 shadow-lg shadow-amber-500/10 md:col-span-3' : 'border-stone-700/30 hover:border-stone-600/50'}`}>
-                    <div
+                  <div key={outlet} className="bg-stone-800/20 border border-stone-700/30 rounded-xl overflow-hidden">
+                    <div 
+                      className="p-4 cursor-pointer hover:bg-stone-800/40 transition-colors"
                       onClick={() => setExpandedOutlet(isExpanded ? null : outlet)}
-                      className="p-4 cursor-pointer active:scale-[0.99] transition-all"
                     >
                       <div className="flex items-center justify-between mb-2">
-                        <span className="font-medium text-white">{outlet}</span>
-                        <div className="flex gap-1 items-center">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-white">{outlet}</span>
+                          <svg className={`w-4 h-4 text-stone-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                        <div className="flex gap-1">
                           {outletPending > 0 && (
                             <span className="px-2 py-0.5 bg-orange-500/20 text-orange-400 text-xs rounded-lg">{outletPending} pending</span>
                           )}
                           {outletDispatched > 0 && (
                             <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-xs rounded-lg">{outletDispatched} sent</span>
                           )}
-                          {outletDelivered > 0 && (
-                            <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 text-xs rounded-lg">{outletDelivered} delivered</span>
-                          )}
-                          {outletDisputed > 0 && (
-                            <span className="px-2 py-0.5 bg-red-500/20 text-red-400 text-xs rounded-lg">{outletDisputed} disputed</span>
-                          )}
-                          <span className="text-stone-500 ml-1">{isExpanded ? '▲' : '▼'}</span>
                         </div>
                       </div>
                       <p className="text-xl font-bold text-amber-400">{formatCurrency(outletTotal)}</p>
-                      <p className="text-xs text-stone-500">{outletTodayOrders.length} orders • tap to {isExpanded ? 'collapse' : 'expand'}</p>
+                      <p className="text-xs text-stone-500">{outletTodayOrders.length} orders • Click to expand</p>
                     </div>
                     
+                    {/* Expanded Order Details */}
                     {isExpanded && (
-                      <div className="px-4 pb-4 border-t border-stone-700/30 animate-modal-in">
-                        <div className="mt-3 space-y-2 max-h-96 overflow-y-auto pr-1">
-                          {outletTodayOrders.length === 0 ? (
-                            <p className="text-stone-500 text-center py-4">No orders from {outlet} today</p>
-                          ) : outletTodayOrders.map(order => (
-                            <div
-                              key={order.id}
-                              className="bg-stone-800/50 rounded-lg p-3 hover:bg-stone-800/80 transition-all"
-                            >
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-white font-medium text-sm">{order.id}</span>
-                                  <span className={`text-xs px-2 py-0.5 rounded-lg ${
-                                    order.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
-                                    order.status === 'dispatched' ? 'bg-blue-500/20 text-blue-400' :
-                                    order.status === 'delivered' || order.status === 'completed' ? 'bg-emerald-500/20 text-emerald-400' :
-                                    order.status === 'disputed' ? 'bg-red-500/20 text-red-400' : 'bg-stone-700 text-stone-400'
-                                  }`}>{order.status}</span>
-                                </div>
-                                <span className="text-amber-400 font-semibold">{formatCurrency(order.totalAmount)}</span>
-                              </div>
-                              <p className="text-xs text-stone-500 mt-1">{formatDate(order.createdAt)} • by {order.createdBy}</p>
-                              
-                              {/* Item details */}
-                              <div className="mt-2 space-y-1">
-                                {order.items.map((item, idx) => (
-                                  <div key={idx} className="flex items-center justify-between text-xs">
-                                    <span className="text-stone-300">{item.name}</span>
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-stone-400">{item.quantity} {item.unit}</span>
-                                      <span className="text-stone-500">{formatCurrency(item.price * item.quantity)}</span>
-                                    </div>
+                      <div className="border-t border-stone-700/50 bg-stone-900/30 p-4 animate-slide-up">
+                        {displayOrders.length === 0 ? (
+                          <p className="text-center text-stone-500 py-2">No {summaryFilter || ''} orders</p>
+                        ) : (
+                          <div className="space-y-3 max-h-80 overflow-y-auto">
+                            {displayOrders.map(order => (
+                              <div key={order.id} className="bg-stone-800/50 rounded-lg p-3 border border-stone-700/30">
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-white font-medium text-sm">{order.id}</span>
+                                    <span className={`px-2 py-0.5 text-xs rounded-lg ${
+                                      order.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
+                                      order.status === 'dispatched' ? 'bg-blue-500/20 text-blue-400' :
+                                      order.status === 'delivered' || order.status === 'completed' ? 'bg-emerald-500/20 text-emerald-400' :
+                                      order.status === 'disputed' ? 'bg-red-500/20 text-red-400' : 'bg-stone-700 text-stone-400'
+                                    }`}>{order.status}</span>
                                   </div>
-                                ))}
-                              </div>
-
-                              {/* Action button for pending orders */}
-                              {order.status === 'pending' && (
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); setReviewingOrder(order); const initEdits = {}; order.items.forEach(it => { initEdits[it.id] = it.requestedQuantity || it.quantity; }); setEditedItems(initEdits); setDispatchNote(''); }}
-                                  className="mt-2 w-full py-2 bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 text-emerald-400 text-xs rounded-lg font-medium hover:from-emerald-500/30 hover:to-emerald-600/30 transition-all active:scale-[0.98] border border-emerald-500/30"
-                                >
-                                  Review & Dispatch →
-                                </button>
-                              )}
-                              {order.dispute && (
-                                <div className="mt-2 bg-red-500/10 border border-red-500/20 rounded-lg p-2">
-                                  <p className="text-xs text-red-400">Dispute: {order.dispute.reason}</p>
-                                  {order.dispute.notes && <p className="text-xs text-stone-500 mt-0.5">{order.dispute.notes}</p>}
+                                  <span className="text-amber-400 font-semibold text-sm">{formatCurrency(order.totalAmount)}</span>
                                 </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
+                                <p className="text-xs text-stone-500 mb-2">{formatDate(order.createdAt)} by {order.createdBy}</p>
+                                <div className="text-xs text-stone-400 space-y-0.5">
+                                  {order.items.slice(0, 5).map((item, idx) => (
+                                    <div key={idx} className="flex justify-between">
+                                      <span>{item.name}</span>
+                                      <span>{item.quantity} {item.unit}</span>
+                                    </div>
+                                  ))}
+                                  {order.items.length > 5 && (
+                                    <p className="text-stone-500 italic">+{order.items.length - 5} more items</p>
+                                  )}
+                                </div>
+                                {order.status === 'pending' && (
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); startReview(order); }}
+                                    className="mt-2 w-full px-3 py-1.5 bg-orange-500 text-white rounded-lg text-xs font-medium hover:bg-orange-600 transition-colors"
+                                  >
+                                    Review & Dispatch
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
                 );
               })}
             </div>
+            
+            {/* Filter indicator */}
+            {summaryFilter && (
+              <div className="flex items-center justify-center gap-2 mt-2">
+                <span className="text-xs text-stone-500">Filtering by: <span className="text-amber-400 capitalize">{summaryFilter}</span></span>
+                <button 
+                  onClick={() => setSummaryFilter(null)}
+                  className="text-xs text-red-400 hover:text-red-300"
+                >
+                  Clear filter
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Cumulative Pending Orders for Vendor */}
@@ -4467,7 +4406,7 @@ function CentralKitchenDashboard({ user, items, categories, orders, revenueData,
                 type="text"
                 value={invoiceSearchQuery}
                 onChange={(e) => setInvoiceSearchQuery(e.target.value)}
-                placeholder="Enter Order ID (e.g., SAN-0001, BAN-0002)..."
+                placeholder="Enter Order ID (e.g., YS0001, YB0002)..."
                 className="flex-1 px-4 py-3 bg-stone-800 border border-stone-700 rounded-xl text-white placeholder-stone-500 focus:ring-2 focus:ring-amber-500/50"
               />
               <button
@@ -4537,7 +4476,7 @@ function CentralKitchenDashboard({ user, items, categories, orders, revenueData,
           {/* Stock Difference Report */}
           <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-6">
             <h3 className="text-lg font-semibold text-cyan-400 mb-4 flex items-center gap-2">
-              <span>📊</span> Stock Difference Report
+              <span>⚖️</span> Stock Difference Report
               <span className="text-xs text-stone-500 font-normal">(Ordered vs Consumed)</span>
             </h3>
             
@@ -4583,7 +4522,6 @@ function CentralKitchenDashboard({ user, items, categories, orders, revenueData,
 
             {/* Report Content */}
             {(() => {
-              // Calculate date range based on period
               const now = new Date();
               let startDate, endDate;
               
@@ -4619,7 +4557,6 @@ function CentralKitchenDashboard({ user, items, categories, orders, revenueData,
                   endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
               }
 
-              // Get orders in period (delivered/completed only = actual stock ordered)
               const activeOutlets = stockDiffOutlet === 'All' ? outlets : [stockDiffOutlet];
               const periodOrders = orders.filter(o => {
                 const orderDate = new Date(o.createdAt);
@@ -4629,28 +4566,19 @@ function CentralKitchenDashboard({ user, items, categories, orders, revenueData,
                        (o.status === 'delivered' || o.status === 'completed' || o.status === 'dispatched');
               });
 
-              // Aggregate ordered quantities by item
               const orderedByItem = {};
               periodOrders.forEach(order => {
                 (order.items || []).forEach(item => {
                   if (!orderedByItem[item.id]) {
                     orderedByItem[item.id] = { 
-                      id: item.id, 
-                      name: item.name, 
-                      unit: item.unit,
-                      categoryId: item.categoryId,
-                      ordered: 0, 
-                      consumed: 0,
-                      orderDetails: [],
-                      consumeDetails: []
+                      id: item.id, name: item.name, unit: item.unit, categoryId: item.categoryId,
+                      ordered: 0, consumed: 0
                     };
                   }
                   orderedByItem[item.id].ordered += item.quantity;
-                  orderedByItem[item.id].orderDetails.push({ outlet: order.outlet, qty: item.quantity, date: order.createdAt, orderId: order.id });
                 });
               });
 
-              // Aggregate consumed quantities from stock out history
               activeOutlets.forEach(outlet => {
                 const outletHistory = globalStockOutHistory?.[outlet] || [];
                 outletHistory.forEach(entry => {
@@ -4661,36 +4589,26 @@ function CentralKitchenDashboard({ user, items, categories, orders, revenueData,
                         if (!orderedByItem[item.id]) {
                           const itemData = items.find(i => i.id === item.id);
                           orderedByItem[item.id] = { 
-                            id: item.id, 
-                            name: item.name || itemData?.name || 'Unknown',
-                            unit: item.unit || itemData?.unit || '',
-                            categoryId: item.categoryId || itemData?.categoryId,
-                            ordered: 0, 
-                            consumed: 0,
-                            orderDetails: [],
-                            consumeDetails: []
+                            id: item.id, name: item.name || itemData?.name || 'Unknown',
+                            unit: item.unit || itemData?.unit || '', categoryId: item.categoryId || itemData?.categoryId,
+                            ordered: 0, consumed: 0
                           };
                         }
                         orderedByItem[item.id].consumed += item.used;
-                        orderedByItem[item.id].consumeDetails.push({ outlet, qty: item.used, date: entry.effectiveDate });
                       }
                     });
                   }
                 });
               });
 
-              // Filter and calculate difference
               let reportItems = Object.values(orderedByItem)
                 .filter(item => {
-                  if (stockDiffItemFilter) {
-                    return item.name.toLowerCase().includes(stockDiffItemFilter.toLowerCase());
-                  }
+                  if (stockDiffItemFilter) return item.name.toLowerCase().includes(stockDiffItemFilter.toLowerCase());
                   return item.ordered > 0 || item.consumed > 0;
                 })
                 .map(item => ({
                   ...item,
                   difference: item.ordered - item.consumed,
-                  percentDiff: item.ordered > 0 ? ((item.ordered - item.consumed) / item.ordered * 100) : (item.consumed > 0 ? -100 : 0)
                 }))
                 .sort((a, b) => Math.abs(b.difference) - Math.abs(a.difference));
 
@@ -4699,7 +4617,6 @@ function CentralKitchenDashboard({ user, items, categories, orders, revenueData,
 
               return (
                 <>
-                  {/* Summary Cards */}
                   <div className="grid grid-cols-3 gap-4 mb-4">
                     <div className="bg-stone-800/30 rounded-xl p-4 text-center">
                       <p className="text-2xl font-bold text-emerald-400">{totalOrdered.toFixed(1)}</p>
@@ -4717,11 +4634,8 @@ function CentralKitchenDashboard({ user, items, categories, orders, revenueData,
                     </div>
                   </div>
 
-                  {/* Items Table */}
                   {reportItems.length === 0 ? (
-                    <div className="text-center py-8 text-stone-500">
-                      <p>No stock data for this period</p>
-                    </div>
+                    <div className="text-center py-8 text-stone-500">No stock data for this period</div>
                   ) : (
                     <div className="overflow-x-auto">
                       <table className="w-full">
@@ -4768,7 +4682,7 @@ function CentralKitchenDashboard({ user, items, categories, orders, revenueData,
                         </tbody>
                       </table>
                       {reportItems.length > 50 && (
-                        <p className="text-center text-stone-500 text-sm mt-3">Showing top 50 items by difference</p>
+                        <p className="text-center text-stone-500 text-sm mt-3">Showing top 50 items</p>
                       )}
                     </div>
                   )}
@@ -7444,7 +7358,7 @@ function AdminDashboard({ data, onUpdateItems, onUpdateRevenueData }) {
                         <h3 className="text-lg font-semibold text-teal-400 flex items-center gap-2">
                           <span>⚖️</span> Stock Difference Report
                         </h3>
-                        <p className="text-sm text-stone-400 mt-1">Compare ordered quantities vs actual consumption</p>
+                        <p className="text-sm text-stone-400 mt-1">Compare ordered vs consumed quantities</p>
                       </div>
                       <button onClick={() => setActiveReport(null)} className="text-stone-400 hover:text-white">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -7452,16 +7366,11 @@ function AdminDashboard({ data, onUpdateItems, onUpdateRevenueData }) {
                         </svg>
                       </button>
                     </div>
-                    
-                    {/* Filters */}
                     <div className="flex flex-wrap items-center gap-3 mt-4 pt-4 border-t border-stone-700/50">
                       <div className="flex items-center gap-2">
                         <label className="text-xs text-stone-500">Period:</label>
-                        <select
-                          value={stockDiffPeriod}
-                          onChange={(e) => setStockDiffPeriod(e.target.value)}
-                          className="px-2 py-1 bg-stone-800 border border-stone-700 rounded-lg text-white text-sm"
-                        >
+                        <select value={stockDiffPeriod} onChange={(e) => setStockDiffPeriod(e.target.value)}
+                          className="px-2 py-1 bg-stone-800 border border-stone-700 rounded-lg text-white text-sm">
                           <option value="today">Today</option>
                           <option value="yesterday">Yesterday</option>
                           <option value="thisWeek">This Week</option>
@@ -7472,190 +7381,51 @@ function AdminDashboard({ data, onUpdateItems, onUpdateRevenueData }) {
                       </div>
                       <div className="flex items-center gap-2">
                         <label className="text-xs text-stone-500">Outlet:</label>
-                        <select
-                          value={stockDiffOutlet}
-                          onChange={(e) => setStockDiffOutlet(e.target.value)}
-                          className="px-2 py-1 bg-stone-800 border border-stone-700 rounded-lg text-white text-sm"
-                        >
+                        <select value={stockDiffOutlet} onChange={(e) => setStockDiffOutlet(e.target.value)}
+                          className="px-2 py-1 bg-stone-800 border border-stone-700 rounded-lg text-white text-sm">
                           <option value="All">All Outlets</option>
                           {outlets.map(o => <option key={o} value={o}>{o}</option>)}
                         </select>
                       </div>
                       <div className="flex items-center gap-2">
                         <label className="text-xs text-stone-500">Search:</label>
-                        <input
-                          type="text"
-                          value={stockDiffItemFilter}
-                          onChange={(e) => setStockDiffItemFilter(e.target.value)}
-                          placeholder="Filter by item..."
-                          className="px-2 py-1 bg-stone-800 border border-stone-700 rounded-lg text-white text-sm w-32"
-                        />
+                        <input type="text" value={stockDiffItemFilter} onChange={(e) => setStockDiffItemFilter(e.target.value)}
+                          placeholder="Filter item..." className="px-2 py-1 bg-stone-800 border border-stone-700 rounded-lg text-white text-sm w-32" />
                       </div>
                     </div>
                   </div>
-                  
                   <div className="p-4">
                     {(() => {
                       const now = new Date();
                       let startDate, endDate;
-                      
                       switch(stockDiffPeriod) {
-                        case 'today':
-                          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                          endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-                          break;
-                        case 'yesterday':
-                          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
-                          endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                          break;
-                        case 'thisWeek':
-                          const dayOfWeek = now.getDay();
-                          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek);
-                          endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-                          break;
-                        case 'lastWeek':
-                          const lastWeekDay = now.getDay();
-                          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - lastWeekDay - 7);
-                          endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - lastWeekDay);
-                          break;
-                        case 'lastMonth':
-                          startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-                          endDate = new Date(now.getFullYear(), now.getMonth(), 1);
-                          break;
-                        case 'last3Months':
-                          startDate = new Date(now.getFullYear(), now.getMonth() - 3, 1);
-                          endDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-                          break;
-                        default:
-                          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                          endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+                        case 'today': startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate()); endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1); break;
+                        case 'yesterday': startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1); endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate()); break;
+                        case 'thisWeek': const dow = now.getDay(); startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dow); endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1); break;
+                        case 'lastWeek': const lwd = now.getDay(); startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - lwd - 7); endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - lwd); break;
+                        case 'lastMonth': startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1); endDate = new Date(now.getFullYear(), now.getMonth(), 1); break;
+                        case 'last3Months': startDate = new Date(now.getFullYear(), now.getMonth() - 3, 1); endDate = new Date(now.getFullYear(), now.getMonth() + 1, 1); break;
+                        default: startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate()); endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
                       }
-
                       const activeOutlets = stockDiffOutlet === 'All' ? outlets : [stockDiffOutlet];
-                      const periodOrders = orders.filter(o => {
-                        const orderDate = new Date(o.createdAt);
-                        return activeOutlets.includes(o.outlet) && 
-                               orderDate >= startDate && 
-                               orderDate < endDate &&
-                               (o.status === 'delivered' || o.status === 'completed' || o.status === 'dispatched');
-                      });
-
+                      const periodOrders = orders.filter(o => { const d = new Date(o.createdAt); return activeOutlets.includes(o.outlet) && d >= startDate && d < endDate && ['delivered','completed','dispatched'].includes(o.status); });
                       const orderedByItem = {};
-                      periodOrders.forEach(order => {
-                        (order.items || []).forEach(item => {
-                          if (!orderedByItem[item.id]) {
-                            orderedByItem[item.id] = { 
-                              id: item.id, name: item.name, unit: item.unit, categoryId: item.categoryId,
-                              ordered: 0, consumed: 0
-                            };
-                          }
-                          orderedByItem[item.id].ordered += item.quantity;
-                        });
-                      });
-
-                      activeOutlets.forEach(outlet => {
-                        const outletHistory = stockOutHistory?.[outlet] || [];
-                        outletHistory.forEach(entry => {
-                          const entryDate = new Date(entry.submittedAt);
-                          if (entryDate >= startDate && entryDate < endDate) {
-                            (entry.items || []).forEach(item => {
-                              if (item.used > 0) {
-                                if (!orderedByItem[item.id]) {
-                                  const itemData = items.find(i => i.id === item.id);
-                                  orderedByItem[item.id] = { 
-                                    id: item.id, name: item.name || itemData?.name || 'Unknown',
-                                    unit: item.unit || itemData?.unit || '', categoryId: item.categoryId || itemData?.categoryId,
-                                    ordered: 0, consumed: 0
-                                  };
-                                }
-                                orderedByItem[item.id].consumed += item.used;
-                              }
-                            });
-                          }
-                        });
-                      });
-
-                      let reportItems = Object.values(orderedByItem)
-                        .filter(item => {
-                          if (stockDiffItemFilter) return item.name.toLowerCase().includes(stockDiffItemFilter.toLowerCase());
-                          return item.ordered > 0 || item.consumed > 0;
-                        })
-                        .map(item => ({
-                          ...item,
-                          difference: item.ordered - item.consumed,
-                        }))
-                        .sort((a, b) => Math.abs(b.difference) - Math.abs(a.difference));
-
-                      const totalOrdered = reportItems.reduce((s, i) => s + i.ordered, 0);
-                      const totalConsumed = reportItems.reduce((s, i) => s + i.consumed, 0);
-
+                      periodOrders.forEach(order => { (order.items || []).forEach(item => { if (!orderedByItem[item.id]) orderedByItem[item.id] = { id: item.id, name: item.name, unit: item.unit, categoryId: item.categoryId, ordered: 0, consumed: 0 }; orderedByItem[item.id].ordered += item.quantity; }); });
+                      activeOutlets.forEach(outlet => { (stockOutHistory?.[outlet] || []).forEach(entry => { const ed = new Date(entry.submittedAt); if (ed >= startDate && ed < endDate) { (entry.items || []).forEach(item => { if (item.used > 0) { if (!orderedByItem[item.id]) { const id = items.find(i => i.id === item.id); orderedByItem[item.id] = { id: item.id, name: item.name || id?.name || 'Unknown', unit: item.unit || id?.unit || '', categoryId: item.categoryId || id?.categoryId, ordered: 0, consumed: 0 }; } orderedByItem[item.id].consumed += item.used; } }); } }); });
+                      let reportItems = Object.values(orderedByItem).filter(i => stockDiffItemFilter ? i.name.toLowerCase().includes(stockDiffItemFilter.toLowerCase()) : i.ordered > 0 || i.consumed > 0).map(i => ({ ...i, difference: i.ordered - i.consumed })).sort((a,b) => Math.abs(b.difference) - Math.abs(a.difference));
+                      const totalOrdered = reportItems.reduce((s,i) => s + i.ordered, 0);
+                      const totalConsumed = reportItems.reduce((s,i) => s + i.consumed, 0);
                       return (
                         <>
                           <div className="grid grid-cols-3 gap-4 mb-4">
-                            <div className="bg-stone-800/30 rounded-xl p-4 text-center">
-                              <p className="text-2xl font-bold text-emerald-400">{totalOrdered.toFixed(1)}</p>
-                              <p className="text-xs text-stone-400">Total Ordered</p>
-                            </div>
-                            <div className="bg-stone-800/30 rounded-xl p-4 text-center">
-                              <p className="text-2xl font-bold text-red-400">{totalConsumed.toFixed(1)}</p>
-                              <p className="text-xs text-stone-400">Total Consumed</p>
-                            </div>
-                            <div className="bg-stone-800/30 rounded-xl p-4 text-center">
-                              <p className={`text-2xl font-bold ${totalOrdered - totalConsumed >= 0 ? 'text-blue-400' : 'text-orange-400'}`}>
-                                {totalOrdered - totalConsumed >= 0 ? '+' : ''}{(totalOrdered - totalConsumed).toFixed(1)}
-                              </p>
-                              <p className="text-xs text-stone-400">Net Difference</p>
-                            </div>
+                            <div className="bg-stone-800/30 rounded-xl p-4 text-center"><p className="text-2xl font-bold text-emerald-400">{totalOrdered.toFixed(1)}</p><p className="text-xs text-stone-400">Total Ordered</p></div>
+                            <div className="bg-stone-800/30 rounded-xl p-4 text-center"><p className="text-2xl font-bold text-red-400">{totalConsumed.toFixed(1)}</p><p className="text-xs text-stone-400">Total Consumed</p></div>
+                            <div className="bg-stone-800/30 rounded-xl p-4 text-center"><p className={`text-2xl font-bold ${totalOrdered-totalConsumed >= 0 ? 'text-blue-400' : 'text-orange-400'}`}>{totalOrdered-totalConsumed >= 0 ? '+' : ''}{(totalOrdered-totalConsumed).toFixed(1)}</p><p className="text-xs text-stone-400">Net Difference</p></div>
                           </div>
-
-                          {reportItems.length === 0 ? (
-                            <div className="text-center py-8 text-stone-500">No stock data for this period</div>
-                          ) : (
-                            <div className="overflow-x-auto">
-                              <table className="w-full">
-                                <thead>
-                                  <tr className="text-left text-xs text-stone-500 uppercase border-b border-stone-700">
-                                    <th className="pb-3">Item</th>
-                                    <th className="pb-3 text-right">Ordered</th>
-                                    <th className="pb-3 text-right">Consumed</th>
-                                    <th className="pb-3 text-right">Difference</th>
-                                    <th className="pb-3 text-right">Status</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {reportItems.slice(0, 50).map(item => (
-                                    <tr key={item.id} className="border-b border-stone-800/30 hover:bg-stone-800/20">
-                                      <td className="py-3">
-                                        <p className="text-white font-medium">{item.name}</p>
-                                        <p className="text-xs text-stone-500">{getCategoryName(item.categoryId)}</p>
-                                      </td>
-                                      <td className="py-3 text-right">
-                                        <span className="text-emerald-400 font-medium">{item.ordered.toFixed(1)}</span>
-                                        <span className="text-stone-500 text-xs ml-1">{item.unit}</span>
-                                      </td>
-                                      <td className="py-3 text-right">
-                                        <span className="text-red-400 font-medium">{item.consumed.toFixed(1)}</span>
-                                        <span className="text-stone-500 text-xs ml-1">{item.unit}</span>
-                                      </td>
-                                      <td className="py-3 text-right">
-                                        <span className={`font-semibold ${item.difference >= 0 ? 'text-blue-400' : 'text-orange-400'}`}>
-                                          {item.difference >= 0 ? '+' : ''}{item.difference.toFixed(1)}
-                                        </span>
-                                      </td>
-                                      <td className="py-3 text-right">
-                                        {item.difference > 0 ? (
-                                          <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded-lg">Surplus</span>
-                                        ) : item.difference < 0 ? (
-                                          <span className="px-2 py-1 bg-orange-500/20 text-orange-400 text-xs rounded-lg">Deficit</span>
-                                        ) : (
-                                          <span className="px-2 py-1 bg-emerald-500/20 text-emerald-400 text-xs rounded-lg">Balanced</span>
-                                        )}
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
+                          {reportItems.length === 0 ? <p className="text-center py-8 text-stone-500">No data for this period</p> : (
+                            <div className="overflow-x-auto"><table className="w-full"><thead><tr className="text-left text-xs text-stone-500 uppercase border-b border-stone-700"><th className="pb-3">Item</th><th className="pb-3 text-right">Ordered</th><th className="pb-3 text-right">Consumed</th><th className="pb-3 text-right">Difference</th><th className="pb-3 text-right">Status</th></tr></thead><tbody>
+                              {reportItems.slice(0,50).map(item => (<tr key={item.id} className="border-b border-stone-800/30 hover:bg-stone-800/20"><td className="py-3"><p className="text-white font-medium">{item.name}</p><p className="text-xs text-stone-500">{getCategoryName(item.categoryId)}</p></td><td className="py-3 text-right"><span className="text-emerald-400 font-medium">{item.ordered.toFixed(1)}</span><span className="text-stone-500 text-xs ml-1">{item.unit}</span></td><td className="py-3 text-right"><span className="text-red-400 font-medium">{item.consumed.toFixed(1)}</span><span className="text-stone-500 text-xs ml-1">{item.unit}</span></td><td className="py-3 text-right"><span className={`font-semibold ${item.difference >= 0 ? 'text-blue-400' : 'text-orange-400'}`}>{item.difference >= 0 ? '+' : ''}{item.difference.toFixed(1)}</span></td><td className="py-3 text-right">{item.difference > 0 ? <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded-lg">Surplus</span> : item.difference < 0 ? <span className="px-2 py-1 bg-orange-500/20 text-orange-400 text-xs rounded-lg">Deficit</span> : <span className="px-2 py-1 bg-emerald-500/20 text-emerald-400 text-xs rounded-lg">Balanced</span>}</td></tr>))}
+                            </tbody></table></div>
                           )}
                         </>
                       );
@@ -7668,92 +7438,44 @@ function AdminDashboard({ data, onUpdateItems, onUpdateRevenueData }) {
               {activeReport === 'invoiceSearch' && (
                 <>
                   <div className="p-4 bg-amber-500/10 border-b border-stone-800/50">
-                    <div className="flex items-center justify-between flex-wrap gap-4">
+                    <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="text-lg font-semibold text-amber-400 flex items-center gap-2">
-                          <span>🔍</span> Invoice Search
-                        </h3>
-                        <p className="text-sm text-stone-400 mt-1">Search for orders by ID, outlet, or creator</p>
+                        <h3 className="text-lg font-semibold text-amber-400 flex items-center gap-2"><span>🔍</span> Invoice Search</h3>
+                        <p className="text-sm text-stone-400 mt-1">Search orders by ID, outlet, or creator</p>
                       </div>
                       <button onClick={() => setActiveReport(null)} className="text-stone-400 hover:text-white">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                       </button>
                     </div>
                   </div>
-                  
                   <div className="p-4">
                     <div className="flex gap-3 mb-4">
-                      <input
-                        type="text"
-                        value={invoiceSearchQuery}
-                        onChange={(e) => setInvoiceSearchQuery(e.target.value)}
-                        placeholder="Enter Order ID (e.g., SAN-0001), outlet name, or creator..."
-                        className="flex-1 px-4 py-3 bg-stone-800 border border-stone-700 rounded-xl text-white placeholder-stone-500 focus:ring-2 focus:ring-amber-500/50"
-                      />
-                      <button
-                        onClick={() => {
-                          const q = invoiceSearchQuery.trim().toUpperCase();
-                          if (!q) { setInvoiceSearchResults([]); return; }
-                          const results = orders.filter(o => 
-                            o.id.toUpperCase().includes(q) || 
-                            o.outlet.toUpperCase().includes(q) ||
-                            (o.createdBy && o.createdBy.toUpperCase().includes(q))
-                          );
-                          setInvoiceSearchResults(results);
-                        }}
-                        className="px-6 py-3 bg-amber-500 text-white rounded-xl font-medium hover:bg-amber-600 transition-all active:scale-95"
-                      >
-                        Search
-                      </button>
+                      <input type="text" value={invoiceSearchQuery} onChange={(e) => setInvoiceSearchQuery(e.target.value)} placeholder="Enter Order ID, outlet, or creator..." className="flex-1 px-4 py-3 bg-stone-800 border border-stone-700 rounded-xl text-white placeholder-stone-500" />
+                      <button onClick={() => { const q = invoiceSearchQuery.trim().toUpperCase(); if (!q) { setInvoiceSearchResults([]); return; } setInvoiceSearchResults(orders.filter(o => o.id.toUpperCase().includes(q) || o.outlet.toUpperCase().includes(q) || (o.createdBy && o.createdBy.toUpperCase().includes(q)))); }} className="px-6 py-3 bg-amber-500 text-white rounded-xl font-medium hover:bg-amber-600">Search</button>
                     </div>
-                    
                     {invoiceSearchResults.length > 0 && (
                       <div className="space-y-3 max-h-96 overflow-y-auto">
-                        <p className="text-sm text-stone-400">{invoiceSearchResults.length} result(s) found</p>
+                        <p className="text-sm text-stone-400">{invoiceSearchResults.length} result(s)</p>
                         {invoiceSearchResults.map(order => (
                           <div key={order.id} className="bg-stone-800/50 rounded-xl p-4 border border-stone-700/30">
                             <div className="flex items-center justify-between mb-2">
                               <div className="flex items-center gap-2">
                                 <span className="text-white font-semibold">{order.id}</span>
                                 <span className="px-2 py-0.5 bg-stone-700 text-stone-300 text-xs rounded-lg">{order.outlet}</span>
-                                <span className={`px-2 py-0.5 text-xs rounded-lg ${
-                                  order.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
-                                  order.status === 'dispatched' ? 'bg-blue-500/20 text-blue-400' :
-                                  order.status === 'delivered' || order.status === 'completed' ? 'bg-emerald-500/20 text-emerald-400' :
-                                  order.status === 'disputed' ? 'bg-red-500/20 text-red-400' : 'bg-stone-700 text-stone-400'
-                                }`}>{order.status}</span>
+                                <span className={`px-2 py-0.5 text-xs rounded-lg ${order.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' : order.status === 'dispatched' ? 'bg-blue-500/20 text-blue-400' : order.status === 'delivered' || order.status === 'completed' ? 'bg-emerald-500/20 text-emerald-400' : order.status === 'disputed' ? 'bg-red-500/20 text-red-400' : 'bg-stone-700 text-stone-400'}`}>{order.status}</span>
                               </div>
                               <span className="text-amber-400 font-semibold">{formatCurrency(order.totalAmount)}</span>
                             </div>
                             <p className="text-xs text-stone-500 mb-2">Created: {formatDate(order.createdAt)} by {order.createdBy}</p>
                             {order.dispatchedAt && <p className="text-xs text-stone-500">Dispatched: {formatDate(order.dispatchedAt)} by {order.dispatchedBy}</p>}
                             {order.acceptedAt && <p className="text-xs text-stone-500">Delivered: {formatDate(order.acceptedAt)} by {order.acceptedBy}</p>}
-                            <div className="mt-3 border-t border-stone-700/50 pt-3">
-                              <p className="text-xs text-stone-400 mb-2">Items:</p>
-                              <div className="space-y-1">
-                                {order.items.map((item, idx) => (
-                                  <div key={idx} className="flex justify-between text-sm">
-                                    <span className="text-stone-300">{item.name}</span>
-                                    <span className="text-stone-400">{item.quantity} {item.unit} × {formatCurrency(item.price)} = {formatCurrency(item.quantity * item.price)}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                            {order.dispute && (
-                              <div className="mt-3 bg-red-500/10 border border-red-500/20 rounded-lg p-2">
-                                <p className="text-xs text-red-400">Dispute: {order.dispute.reason}</p>
-                                {order.dispute.notes && <p className="text-xs text-stone-500">{order.dispute.notes}</p>}
-                              </div>
-                            )}
+                            <div className="mt-3 border-t border-stone-700/50 pt-3"><p className="text-xs text-stone-400 mb-2">Items:</p><div className="space-y-1">{order.items.map((item, idx) => (<div key={idx} className="flex justify-between text-sm"><span className="text-stone-300">{item.name}</span><span className="text-stone-400">{item.quantity} {item.unit} × {formatCurrency(item.price)} = {formatCurrency(item.quantity * item.price)}</span></div>))}</div></div>
+                            {order.dispute && <div className="mt-3 bg-red-500/10 border border-red-500/20 rounded-lg p-2"><p className="text-xs text-red-400">Dispute: {order.dispute.reason}</p>{order.dispute.notes && <p className="text-xs text-stone-500">{order.dispute.notes}</p>}</div>}
                           </div>
                         ))}
                       </div>
                     )}
-                    {invoiceSearchQuery && invoiceSearchResults.length === 0 && (
-                      <p className="text-stone-500 text-center py-4">No orders found matching "{invoiceSearchQuery}"</p>
-                    )}
+                    {invoiceSearchQuery && invoiceSearchResults.length === 0 && <p className="text-stone-500 text-center py-4">No orders found</p>}
                   </div>
                 </>
               )}
