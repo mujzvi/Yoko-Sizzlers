@@ -2914,6 +2914,33 @@ function CentralKitchenDashboard({ user, items, categories, orders, revenueData,
   const [summaryFilter, setSummaryFilter] = useState(null);
   const [expandedOutlet, setExpandedOutlet] = useState(null);
   
+  // Item editing state (unit, packaging, weight)
+  const [editingItemId, setEditingItemId] = useState(null);
+  const [editingItemData, setEditingItemData] = useState({ unit: '', pkg: '', wt: '' });
+  
+  // Custom metrics (stored in localStorage, can be added by CK)
+  const [unitOptions, setUnitOptions] = useState(() => {
+    const saved = localStorage.getItem('yokoUnitOptions');
+    return saved ? JSON.parse(saved) : ['kg', 'litre', 'piece', 'bundle'];
+  });
+  const [packagingOptions, setPackagingOptions] = useState(() => {
+    const saved = localStorage.getItem('yokoPackagingOptions');
+    return saved ? JSON.parse(saved) : ['tin', 'bottle', 'piece', 'loose', 'box', 'can', 'packet', 'bag'];
+  });
+  const [showAddUnit, setShowAddUnit] = useState(false);
+  const [showAddPackaging, setShowAddPackaging] = useState(false);
+  const [newUnitOption, setNewUnitOption] = useState('');
+  const [newPackagingOption, setNewPackagingOption] = useState('');
+  
+  // Save custom metrics to localStorage when changed
+  useEffect(() => {
+    localStorage.setItem('yokoUnitOptions', JSON.stringify(unitOptions));
+  }, [unitOptions]);
+  
+  useEffect(() => {
+    localStorage.setItem('yokoPackagingOptions', JSON.stringify(packagingOptions));
+  }, [packagingOptions]);
+  
   // Load vendor alerts on mount (simulated weekly check)
   useEffect(() => {
     const alerts = AIAnalytics.compareVendorPrices(items);
@@ -2991,6 +3018,48 @@ function CentralKitchenDashboard({ user, items, categories, orders, revenueData,
   const deleteItem = (id) => {
     if (confirm('Are you sure you want to delete this item?')) {
       onUpdateItems(items.filter(item => item.id !== id));
+    }
+  };
+
+  // Save item unit, packaging, weight changes
+  const saveItemDetails = (itemId) => {
+    onUpdateItems(items.map(item => 
+      item.id === itemId ? {
+        ...item,
+        unit: editingItemData.unit || item.unit,
+        pkg: editingItemData.pkg || item.pkg || '',
+        wt: parseFloat(editingItemData.wt) || item.wt || 1,
+      } : item
+    ));
+    setEditingItemId(null);
+    setEditingItemData({ unit: '', pkg: '', wt: '' });
+  };
+
+  // Start editing an item
+  const startEditingItem = (item) => {
+    setEditingItemId(item.id);
+    setEditingItemData({
+      unit: item.unit || 'kg',
+      pkg: item.pkg || '',
+      wt: item.wt || 1,
+    });
+  };
+
+  // Add new unit option
+  const addUnitOption = () => {
+    if (newUnitOption.trim() && !unitOptions.includes(newUnitOption.trim().toLowerCase())) {
+      setUnitOptions([...unitOptions, newUnitOption.trim().toLowerCase()]);
+      setNewUnitOption('');
+      setShowAddUnit(false);
+    }
+  };
+
+  // Add new packaging option
+  const addPackagingOption = () => {
+    if (newPackagingOption.trim() && !packagingOptions.includes(newPackagingOption.trim().toLowerCase())) {
+      setPackagingOptions([...packagingOptions, newPackagingOption.trim().toLowerCase()]);
+      setNewPackagingOption('');
+      setShowAddPackaging(false);
     }
   };
 
@@ -3892,7 +3961,7 @@ function CentralKitchenDashboard({ user, items, categories, orders, revenueData,
                       )}
                     </div>
                     
-                    {/* Expanded Items List */}
+                    {/* Expanded Items List with Edit */}
                     {isExpanded && (
                       <div className="border-t border-stone-700/50 bg-stone-900/30 p-4">
                         {categoryItems.length === 0 ? (
@@ -3900,22 +3969,106 @@ function CentralKitchenDashboard({ user, items, categories, orders, revenueData,
                         ) : (
                           <div className="space-y-2">
                             {categoryItems.map(item => (
-                              <div key={item.id} className="flex items-center justify-between py-2 px-3 bg-stone-800/50 rounded-lg">
-                                <div>
-                                  <p className="text-white text-sm font-medium">{item.name}</p>
-                                  <p className="text-xs text-stone-500">{item.unit}</p>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                  <span className="text-amber-400 font-medium">{formatCurrency(item.price)}</span>
-                                  <button
-                                    onClick={() => deleteItem(item.id)}
-                                    className="p-1.5 text-red-400 hover:bg-red-500/20 rounded transition-colors"
-                                  >
-                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                  </button>
-                                </div>
+                              <div key={item.id} className="bg-stone-800/50 rounded-lg overflow-hidden">
+                                {editingItemId === item.id ? (
+                                  /* Edit Mode */
+                                  <div className="p-3 space-y-3">
+                                    <div className="flex items-center justify-between">
+                                      <p className="text-white font-medium">{item.name}</p>
+                                      <span className="text-amber-400 font-medium">{formatCurrency(item.price)}</span>
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-2">
+                                      <div>
+                                        <label className="text-xs text-stone-500 block mb-1">Unit</label>
+                                        <div className="flex gap-1">
+                                          <select
+                                            value={editingItemData.unit}
+                                            onChange={(e) => setEditingItemData({...editingItemData, unit: e.target.value})}
+                                            className="flex-1 px-2 py-1.5 bg-stone-700 border border-stone-600 rounded text-white text-sm"
+                                          >
+                                            {unitOptions.map(u => <option key={u} value={u}>{u}</option>)}
+                                          </select>
+                                          <button
+                                            onClick={() => setShowAddUnit(true)}
+                                            className="px-2 py-1 bg-stone-600 text-stone-300 rounded text-xs hover:bg-stone-500"
+                                            title="Add new unit"
+                                          >+</button>
+                                        </div>
+                                      </div>
+                                      <div>
+                                        <label className="text-xs text-stone-500 block mb-1">Packaging</label>
+                                        <div className="flex gap-1">
+                                          <select
+                                            value={editingItemData.pkg}
+                                            onChange={(e) => setEditingItemData({...editingItemData, pkg: e.target.value})}
+                                            className="flex-1 px-2 py-1.5 bg-stone-700 border border-stone-600 rounded text-white text-sm"
+                                          >
+                                            <option value="">Select...</option>
+                                            {packagingOptions.map(p => <option key={p} value={p}>{p}</option>)}
+                                          </select>
+                                          <button
+                                            onClick={() => setShowAddPackaging(true)}
+                                            className="px-2 py-1 bg-stone-600 text-stone-300 rounded text-xs hover:bg-stone-500"
+                                            title="Add new packaging"
+                                          >+</button>
+                                        </div>
+                                      </div>
+                                      <div>
+                                        <label className="text-xs text-stone-500 block mb-1">Weight</label>
+                                        <input
+                                          type="number"
+                                          step="0.1"
+                                          value={editingItemData.wt}
+                                          onChange={(e) => setEditingItemData({...editingItemData, wt: e.target.value})}
+                                          className="w-full px-2 py-1.5 bg-stone-700 border border-stone-600 rounded text-white text-sm"
+                                          placeholder="e.g. 1"
+                                        />
+                                      </div>
+                                    </div>
+                                    <div className="flex gap-2 pt-2">
+                                      <button
+                                        onClick={() => saveItemDetails(item.id)}
+                                        className="px-3 py-1.5 bg-emerald-500 text-white rounded text-sm font-medium hover:bg-emerald-600"
+                                      >Save</button>
+                                      <button
+                                        onClick={() => { setEditingItemId(null); setEditingItemData({ unit: '', pkg: '', wt: '' }); }}
+                                        className="px-3 py-1.5 bg-stone-600 text-white rounded text-sm hover:bg-stone-500"
+                                      >Cancel</button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  /* View Mode */
+                                  <div className="flex items-center justify-between py-2 px-3">
+                                    <div className="flex-1">
+                                      <p className="text-white text-sm font-medium">{item.name}</p>
+                                      <p className="text-xs text-stone-500">
+                                        {item.unit}
+                                        {item.pkg && <span className="ml-2">• {item.pkg}</span>}
+                                        {item.wt && item.wt !== 1 && <span className="ml-2">• {item.wt} {item.unit}</span>}
+                                      </p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-amber-400 font-medium">{formatCurrency(item.price)}</span>
+                                      <button
+                                        onClick={() => startEditingItem(item)}
+                                        className="p-1.5 text-blue-400 hover:bg-blue-500/20 rounded transition-colors"
+                                        title="Edit unit, packaging, weight"
+                                      >
+                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                        </svg>
+                                      </button>
+                                      <button
+                                        onClick={() => deleteItem(item.id)}
+                                        className="p-1.5 text-red-400 hover:bg-red-500/20 rounded transition-colors"
+                                      >
+                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             ))}
                           </div>
@@ -3926,6 +4079,48 @@ function CentralKitchenDashboard({ user, items, categories, orders, revenueData,
                 );
               })}
             </div>
+            
+            {/* Add New Unit Modal */}
+            {showAddUnit && (
+              <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+                <div className="bg-stone-800 rounded-xl p-6 w-full max-w-sm animate-modal-in">
+                  <h4 className="text-white font-semibold mb-4">Add New Unit</h4>
+                  <input
+                    type="text"
+                    value={newUnitOption}
+                    onChange={(e) => setNewUnitOption(e.target.value)}
+                    placeholder="e.g. dozen, gram, ml"
+                    className="w-full px-4 py-2 bg-stone-700 border border-stone-600 rounded-lg text-white placeholder-stone-500 mb-4"
+                    autoFocus
+                  />
+                  <div className="flex gap-2">
+                    <button onClick={addUnitOption} className="flex-1 px-4 py-2 bg-emerald-500 text-white rounded-lg font-medium hover:bg-emerald-600">Add</button>
+                    <button onClick={() => { setShowAddUnit(false); setNewUnitOption(''); }} className="flex-1 px-4 py-2 bg-stone-600 text-white rounded-lg hover:bg-stone-500">Cancel</button>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Add New Packaging Modal */}
+            {showAddPackaging && (
+              <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+                <div className="bg-stone-800 rounded-xl p-6 w-full max-w-sm animate-modal-in">
+                  <h4 className="text-white font-semibold mb-4">Add New Packaging</h4>
+                  <input
+                    type="text"
+                    value={newPackagingOption}
+                    onChange={(e) => setNewPackagingOption(e.target.value)}
+                    placeholder="e.g. carton, tray, pouch"
+                    className="w-full px-4 py-2 bg-stone-700 border border-stone-600 rounded-lg text-white placeholder-stone-500 mb-4"
+                    autoFocus
+                  />
+                  <div className="flex gap-2">
+                    <button onClick={addPackagingOption} className="flex-1 px-4 py-2 bg-emerald-500 text-white rounded-lg font-medium hover:bg-emerald-600">Add</button>
+                    <button onClick={() => { setShowAddPackaging(false); setNewPackagingOption(''); }} className="flex-1 px-4 py-2 bg-stone-600 text-white rounded-lg hover:bg-stone-500">Cancel</button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Items Section */}
