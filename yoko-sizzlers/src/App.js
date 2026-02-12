@@ -60,13 +60,24 @@ const supaRest = {
   async upsert(table, rows, onConflict) {
     const body = Array.isArray(rows) ? rows : [rows];
     let url = `${REST_URL}/${table}`;
-    if (onConflict) url += `?on_conflict=${onConflict}`;
+    const headers = { ...supaHeaders, 'Accept': 'application/json' };
+    
+    // For upsert, use Prefer header with on_conflict
+    if (onConflict) {
+      headers['Prefer'] = `return=representation,resolution=merge-duplicates`;
+    } else {
+      headers['Prefer'] = 'return=representation';
+    }
+    
     const res = await fetch(url, {
       method: 'POST',
-      headers: { ...supaHeaders, 'Accept': 'application/json', 'Prefer': 'return=representation,resolution=merge-duplicates' },
+      headers,
       body: JSON.stringify(body),
     });
-    if (!res.ok) throw new Error(`Upsert ${table} failed: ${res.status}`);
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Upsert ${table} failed: ${res.status} - ${errText}`);
+    }
     return await res.json();
   },
 };
