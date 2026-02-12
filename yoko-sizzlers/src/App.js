@@ -919,8 +919,13 @@ export default function YokoSizzlersApp() {
     });
     
     try {
-      await supaRest.upsert('revenue_data', rows, 'outlet,month');
-    } catch (e) { console.error('Update revenue error:', e); }
+      console.log('Saving revenue data to Supabase:', rows);
+      const result = await supaRest.upsert('revenue_data', rows, 'outlet,month');
+      console.log('Revenue save result:', result);
+    } catch (e) { 
+      console.error('Update revenue error:', e);
+      alert('Failed to save revenue: ' + e.message);
+    }
     setRevenueData(newRevenueData);
   };
 
@@ -1284,6 +1289,9 @@ function OutletDashboard({ user, items, categories, orders, onAddOrder, onUpdate
   // Invoice Search state
   const [invoiceSearchQuery, setInvoiceSearchQuery] = useState('');
   const [invoiceSearchResults, setInvoiceSearchResults] = useState([]);
+  
+  // Item Search state (for placing orders)
+  const [itemSearchQuery, setItemSearchQuery] = useState('');
   
   // Dispute state
   const [disputingOrder, setDisputingOrder] = useState(null);
@@ -1704,9 +1712,11 @@ function OutletDashboard({ user, items, categories, orders, onAddOrder, onUpdate
               if (orderStep === 'items') {
                 setOrderStep('categories');
                 setSelectedCategoryId(null);
+                setItemSearchQuery('');
               } else {
                 setShowOrderPage(false);
                 setCart([]);
+                setItemSearchQuery('');
               }
             }}
             className="flex items-center gap-2 px-4 py-2 bg-stone-800 text-white rounded-xl hover:bg-stone-700 transition-colors"
@@ -1718,6 +1728,68 @@ function OutletDashboard({ user, items, categories, orders, onAddOrder, onUpdate
           </button>
           <h1 className="text-xl font-bold text-white">Create New Order</h1>
         </div>
+
+        {/* Item Search Bar */}
+        <div className="bg-stone-900/50 border border-stone-800/50 rounded-xl p-3 mb-4">
+          <div className="flex items-center gap-3">
+            <svg className="w-5 h-5 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              type="text"
+              value={itemSearchQuery}
+              onChange={(e) => setItemSearchQuery(e.target.value)}
+              placeholder="Search items across all categories..."
+              className="flex-1 bg-transparent text-white placeholder-stone-500 outline-none"
+            />
+            {itemSearchQuery && (
+              <button onClick={() => setItemSearchQuery('')} className="text-stone-500 hover:text-white">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Search Results */}
+        {itemSearchQuery.trim() && (
+          <div className="bg-stone-900/50 border border-amber-500/30 rounded-2xl p-4 mb-4">
+            <p className="text-sm text-amber-400 mb-3">Search results for "{itemSearchQuery}"</p>
+            {(() => {
+              const searchResults = items.filter(item => 
+                item.name.toLowerCase().includes(itemSearchQuery.toLowerCase())
+              );
+              if (searchResults.length === 0) {
+                return <p className="text-stone-500 text-center py-4">No items found</p>;
+              }
+              return (
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {searchResults.map(item => {
+                    const inCart = cart.find(c => c.id === item.id);
+                    return (
+                      <div key={item.id} className="flex items-center justify-between p-3 bg-stone-800/50 rounded-xl">
+                        <div>
+                          <p className="text-white font-medium">{item.name}</p>
+                          <p className="text-xs text-stone-500">{getCategoryName(item.categoryId)} • {formatCurrency(item.price)}/{item.unit}</p>
+                        </div>
+                        {inCart ? (
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => updateCartQuantity(item.id, inCart.quantity - 1)} className="w-8 h-8 bg-stone-700 text-white rounded-lg hover:bg-stone-600">-</button>
+                            <span className="w-12 text-center text-white font-medium">{inCart.quantity}</span>
+                            <button onClick={() => updateCartQuantity(item.id, inCart.quantity + 1)} className="w-8 h-8 bg-amber-500 text-white rounded-lg hover:bg-amber-600">+</button>
+                          </div>
+                        ) : (
+                          <button onClick={() => addToCart(item)} className="px-4 py-2 bg-amber-500 text-white rounded-lg font-medium hover:bg-amber-600">Add</button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </div>
+        )}
 
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Main Content */}
@@ -1740,6 +1812,7 @@ function OutletDashboard({ user, items, categories, orders, onAddOrder, onUpdate
                         onClick={() => {
                           setSelectedCategoryId(category.id);
                           setOrderStep('items');
+                          setItemSearchQuery('');
                         }}
                         className="flex items-center justify-between p-4 bg-stone-800/30 border border-stone-700/50 rounded-xl hover:bg-stone-800/50 hover:border-amber-500/50 transition-all text-left group active:scale-[0.98] hover:shadow-lg hover:shadow-amber-500/10"
                       >
@@ -2914,6 +2987,10 @@ function CentralKitchenDashboard({ user, items, categories, orders, revenueData,
   const [summaryFilter, setSummaryFilter] = useState(null);
   const [expandedOutlet, setExpandedOutlet] = useState(null);
   
+  // Global Item Search with Analysis
+  const [globalItemSearch, setGlobalItemSearch] = useState('');
+  const [selectedAnalysisItem, setSelectedAnalysisItem] = useState(null);
+  
   // Item editing state (unit, packaging, weight)
   const [editingItemId, setEditingItemId] = useState(null);
   const [editingItemData, setEditingItemData] = useState({ unit: '', pkg: '', wt: '' });
@@ -3376,6 +3453,72 @@ If you cannot extract prices or the PDF is not a price list, return: []`
     { id: 'ai', label: 'AI Insights', icon: '🤖' },
   ];
 
+  // Get item analysis data
+  const getItemAnalysis = (item) => {
+    const now = new Date();
+    const thisMonth = now.getMonth() + 1;
+    const lastMonth = thisMonth === 1 ? 12 : thisMonth - 1;
+    
+    // Orders by outlet (all time and this month)
+    const ordersByOutlet = {};
+    const thisMonthOrdersByOutlet = {};
+    outlets.forEach(outlet => {
+      ordersByOutlet[outlet] = { qty: 0, cost: 0 };
+      thisMonthOrdersByOutlet[outlet] = { qty: 0, cost: 0 };
+    });
+    
+    orders.forEach(order => {
+      const orderMonth = new Date(order.createdAt).getMonth() + 1;
+      (order.items || []).forEach(oi => {
+        if (oi.id === item.id) {
+          ordersByOutlet[order.outlet].qty += oi.quantity;
+          ordersByOutlet[order.outlet].cost += oi.quantity * oi.price;
+          if (orderMonth === thisMonth) {
+            thisMonthOrdersByOutlet[order.outlet].qty += oi.quantity;
+            thisMonthOrdersByOutlet[order.outlet].cost += oi.quantity * oi.price;
+          }
+        }
+      });
+    });
+    
+    // Consumed (from stock out history)
+    let totalConsumed = 0;
+    let thisMonthConsumed = 0;
+    outlets.forEach(outlet => {
+      (globalStockOutHistory?.[outlet] || []).forEach(entry => {
+        const entryMonth = new Date(entry.submittedAt).getMonth() + 1;
+        (entry.items || []).forEach(si => {
+          if (si.id === item.id && si.used > 0) {
+            totalConsumed += si.used;
+            if (entryMonth === thisMonth) {
+              thisMonthConsumed += si.used;
+            }
+          }
+        });
+      });
+    });
+    
+    const totalOrdered = Object.values(ordersByOutlet).reduce((s, o) => s + o.qty, 0);
+    const thisMonthOrdered = Object.values(thisMonthOrdersByOutlet).reduce((s, o) => s + o.qty, 0);
+    const consumedPercent = totalOrdered > 0 ? (totalConsumed / totalOrdered * 100) : 0;
+    
+    return {
+      ordersByOutlet,
+      thisMonthOrdersByOutlet,
+      totalOrdered,
+      thisMonthOrdered,
+      totalConsumed,
+      thisMonthConsumed,
+      consumedPercent,
+      currentPrice: item.price,
+      previousPrice: item.previousPrice || null,
+      priceChange: item.priceChange || 0,
+      priceHistory: item.priceHistory || [],
+      lastUpdated: item.lastUpdated,
+      updatedBy: item.updatedBy,
+    };
+  };
+
   return (
     <div className="space-y-6">
       {/* Tab Navigation */}
@@ -3399,6 +3542,141 @@ If you cannot extract prices or the PDF is not a price list, return: []`
             )}
           </button>
         ))}
+      </div>
+
+      {/* Global Item Search */}
+      <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-4">
+        <div className="flex items-center gap-3">
+          <svg className="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            type="text"
+            value={globalItemSearch}
+            onChange={(e) => { setGlobalItemSearch(e.target.value); setSelectedAnalysisItem(null); }}
+            placeholder="Search items for detailed analysis..."
+            className="flex-1 bg-transparent text-white placeholder-stone-500 outline-none"
+          />
+          {globalItemSearch && (
+            <button onClick={() => { setGlobalItemSearch(''); setSelectedAnalysisItem(null); }} className="text-stone-500 hover:text-white">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
+        
+        {/* Search Results Dropdown */}
+        {globalItemSearch.trim() && !selectedAnalysisItem && (
+          <div className="mt-3 border-t border-stone-800 pt-3 max-h-48 overflow-y-auto">
+            {(() => {
+              const results = items.filter(i => i.name.toLowerCase().includes(globalItemSearch.toLowerCase())).slice(0, 10);
+              if (results.length === 0) return <p className="text-stone-500 text-sm">No items found</p>;
+              return results.map(item => (
+                <button
+                  key={item.id}
+                  onClick={() => setSelectedAnalysisItem(item)}
+                  className="w-full text-left p-2 hover:bg-stone-800/50 rounded-lg transition-colors flex items-center justify-between"
+                >
+                  <div>
+                    <p className="text-white font-medium">{item.name}</p>
+                    <p className="text-xs text-stone-500">{getCategoryName(item.categoryId)}</p>
+                  </div>
+                  <span className="text-amber-400 font-medium">{formatCurrency(item.price)}</span>
+                </button>
+              ));
+            })()}
+          </div>
+        )}
+        
+        {/* Item Analysis Panel */}
+        {selectedAnalysisItem && (
+          <div className="mt-4 border-t border-stone-700 pt-4">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-semibold text-white">{selectedAnalysisItem.name}</h3>
+                <p className="text-sm text-stone-500">{getCategoryName(selectedAnalysisItem.categoryId)} • {selectedAnalysisItem.unit}</p>
+              </div>
+              <button onClick={() => setSelectedAnalysisItem(null)} className="text-stone-400 hover:text-white">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            {(() => {
+              const analysis = getItemAnalysis(selectedAnalysisItem);
+              return (
+                <div className="space-y-4">
+                  {/* Price Info */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="bg-stone-800/30 rounded-xl p-3 text-center">
+                      <p className="text-2xl font-bold text-amber-400">{formatCurrency(analysis.currentPrice)}</p>
+                      <p className="text-xs text-stone-500">Current Price</p>
+                    </div>
+                    <div className="bg-stone-800/30 rounded-xl p-3 text-center">
+                      <p className="text-2xl font-bold text-stone-400">{analysis.previousPrice ? formatCurrency(analysis.previousPrice) : '-'}</p>
+                      <p className="text-xs text-stone-500">Previous Price</p>
+                    </div>
+                    <div className="bg-stone-800/30 rounded-xl p-3 text-center">
+                      <p className={`text-2xl font-bold ${analysis.priceChange > 0 ? 'text-red-400' : analysis.priceChange < 0 ? 'text-emerald-400' : 'text-stone-400'}`}>
+                        {analysis.priceChange !== 0 ? (analysis.priceChange > 0 ? '+' : '') + formatCurrency(analysis.priceChange) : '-'}
+                      </p>
+                      <p className="text-xs text-stone-500">Price Change</p>
+                    </div>
+                    <div className="bg-stone-800/30 rounded-xl p-3 text-center">
+                      <p className={`text-2xl font-bold ${analysis.consumedPercent >= 80 ? 'text-emerald-400' : analysis.consumedPercent >= 50 ? 'text-yellow-400' : 'text-red-400'}`}>
+                        {analysis.consumedPercent.toFixed(0)}%
+                      </p>
+                      <p className="text-xs text-stone-500">Consumed vs Ordered</p>
+                    </div>
+                  </div>
+                  
+                  {/* Order Stats by Outlet */}
+                  <div className="bg-stone-800/20 rounded-xl p-4">
+                    <h4 className="text-sm font-semibold text-white mb-3">Orders by Outlet (This Month)</h4>
+                    <div className="grid grid-cols-3 gap-3">
+                      {outlets.map(outlet => (
+                        <div key={outlet} className="bg-stone-800/30 rounded-lg p-3 text-center">
+                          <p className="text-lg font-bold text-white">{analysis.thisMonthOrdersByOutlet[outlet].qty}</p>
+                          <p className="text-xs text-stone-500">{outlet}</p>
+                          <p className="text-xs text-amber-400">{formatCurrency(analysis.thisMonthOrdersByOutlet[outlet].cost)}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* Summary Stats */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 text-center">
+                      <p className="text-xl font-bold text-emerald-400">{analysis.totalOrdered}</p>
+                      <p className="text-xs text-stone-500">Total Ordered (All Time)</p>
+                    </div>
+                    <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 text-center">
+                      <p className="text-xl font-bold text-blue-400">{analysis.thisMonthOrdered}</p>
+                      <p className="text-xs text-stone-500">Ordered This Month</p>
+                    </div>
+                    <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 text-center">
+                      <p className="text-xl font-bold text-red-400">{analysis.totalConsumed}</p>
+                      <p className="text-xs text-stone-500">Total Consumed</p>
+                    </div>
+                    <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-3 text-center">
+                      <p className="text-xl font-bold text-purple-400">{analysis.thisMonthConsumed}</p>
+                      <p className="text-xs text-stone-500">Consumed This Month</p>
+                    </div>
+                  </div>
+                  
+                  {/* Last Updated */}
+                  {analysis.lastUpdated && (
+                    <p className="text-xs text-stone-500 text-right">
+                      Last price update: {formatDate(analysis.lastUpdated)} {analysis.updatedBy && `by ${analysis.updatedBy}`}
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
+          </div>
+        )}
       </div>
 
       {/* OVERVIEW TAB */}
@@ -5466,6 +5744,10 @@ function AdminDashboard({ data, onUpdateItems, onUpdateRevenueData }) {
   // Invoice Search state
   const [invoiceSearchQuery, setInvoiceSearchQuery] = useState('');
   const [invoiceSearchResults, setInvoiceSearchResults] = useState([]);
+  
+  // Global Item Search with Analysis
+  const [globalItemSearch, setGlobalItemSearch] = useState('');
+  const [selectedAnalysisItem, setSelectedAnalysisItem] = useState(null);
 
   const { orders, items, users, revenueData, categories, stockOutHistory } = data;
   const outlets = ['Santacruz', 'Bandra', 'Oshiwara'];
@@ -5571,8 +5853,122 @@ function AdminDashboard({ data, onUpdateItems, onUpdateRevenueData }) {
     return `₹${(amount / 100000).toFixed(2)}L`;
   };
 
+  // Get item analysis data for Admin
+  const getItemAnalysis = (item) => {
+    const now = new Date();
+    const thisMonth = now.getMonth() + 1;
+    
+    const ordersByOutlet = {};
+    const thisMonthOrdersByOutlet = {};
+    outlets.forEach(outlet => {
+      ordersByOutlet[outlet] = { qty: 0, cost: 0 };
+      thisMonthOrdersByOutlet[outlet] = { qty: 0, cost: 0 };
+    });
+    
+    orders.forEach(order => {
+      const orderMonth = new Date(order.createdAt).getMonth() + 1;
+      (order.items || []).forEach(oi => {
+        if (oi.id === item.id) {
+          ordersByOutlet[order.outlet].qty += oi.quantity;
+          ordersByOutlet[order.outlet].cost += oi.quantity * oi.price;
+          if (orderMonth === thisMonth) {
+            thisMonthOrdersByOutlet[order.outlet].qty += oi.quantity;
+            thisMonthOrdersByOutlet[order.outlet].cost += oi.quantity * oi.price;
+          }
+        }
+      });
+    });
+    
+    let totalConsumed = 0, thisMonthConsumed = 0;
+    outlets.forEach(outlet => {
+      (stockOutHistory?.[outlet] || []).forEach(entry => {
+        const entryMonth = new Date(entry.submittedAt).getMonth() + 1;
+        (entry.items || []).forEach(si => {
+          if (si.id === item.id && si.used > 0) {
+            totalConsumed += si.used;
+            if (entryMonth === thisMonth) thisMonthConsumed += si.used;
+          }
+        });
+      });
+    });
+    
+    const totalOrdered = Object.values(ordersByOutlet).reduce((s, o) => s + o.qty, 0);
+    const thisMonthOrdered = Object.values(thisMonthOrdersByOutlet).reduce((s, o) => s + o.qty, 0);
+    const consumedPercent = totalOrdered > 0 ? (totalConsumed / totalOrdered * 100) : 0;
+    
+    return { ordersByOutlet, thisMonthOrdersByOutlet, totalOrdered, thisMonthOrdered, totalConsumed, thisMonthConsumed, consumedPercent, currentPrice: item.price, previousPrice: item.previousPrice || null, priceChange: item.priceChange || 0, lastUpdated: item.lastUpdated, updatedBy: item.updatedBy };
+  };
+
   return (
     <div className="space-y-6">
+      {/* Global Item Search */}
+      <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-4">
+        <div className="flex items-center gap-3">
+          <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            type="text"
+            value={globalItemSearch}
+            onChange={(e) => { setGlobalItemSearch(e.target.value); setSelectedAnalysisItem(null); }}
+            placeholder="Search items for detailed analysis..."
+            className="flex-1 bg-transparent text-white placeholder-stone-500 outline-none"
+          />
+          {globalItemSearch && (
+            <button onClick={() => { setGlobalItemSearch(''); setSelectedAnalysisItem(null); }} className="text-stone-500 hover:text-white">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
+        
+        {globalItemSearch.trim() && !selectedAnalysisItem && (
+          <div className="mt-3 border-t border-stone-800 pt-3 max-h-48 overflow-y-auto">
+            {(() => {
+              const results = items.filter(i => i.name.toLowerCase().includes(globalItemSearch.toLowerCase())).slice(0, 10);
+              if (results.length === 0) return <p className="text-stone-500 text-sm">No items found</p>;
+              return results.map(item => (
+                <button key={item.id} onClick={() => setSelectedAnalysisItem(item)} className="w-full text-left p-2 hover:bg-stone-800/50 rounded-lg transition-colors flex items-center justify-between">
+                  <div><p className="text-white font-medium">{item.name}</p><p className="text-xs text-stone-500">{getCategoryName(item.categoryId)}</p></div>
+                  <span className="text-purple-400 font-medium">{formatCurrency(item.price)}</span>
+                </button>
+              ));
+            })()}
+          </div>
+        )}
+        
+        {selectedAnalysisItem && (
+          <div className="mt-4 border-t border-stone-700 pt-4">
+            <div className="flex items-center justify-between mb-4">
+              <div><h3 className="text-lg font-semibold text-white">{selectedAnalysisItem.name}</h3><p className="text-sm text-stone-500">{getCategoryName(selectedAnalysisItem.categoryId)} • {selectedAnalysisItem.unit}</p></div>
+              <button onClick={() => setSelectedAnalysisItem(null)} className="text-stone-400 hover:text-white"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+            </div>
+            {(() => {
+              const analysis = getItemAnalysis(selectedAnalysisItem);
+              return (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="bg-stone-800/30 rounded-xl p-3 text-center"><p className="text-2xl font-bold text-purple-400">{formatCurrency(analysis.currentPrice)}</p><p className="text-xs text-stone-500">Current Price</p></div>
+                    <div className="bg-stone-800/30 rounded-xl p-3 text-center"><p className="text-2xl font-bold text-stone-400">{analysis.previousPrice ? formatCurrency(analysis.previousPrice) : '-'}</p><p className="text-xs text-stone-500">Previous Price</p></div>
+                    <div className="bg-stone-800/30 rounded-xl p-3 text-center"><p className={`text-2xl font-bold ${analysis.priceChange > 0 ? 'text-red-400' : analysis.priceChange < 0 ? 'text-emerald-400' : 'text-stone-400'}`}>{analysis.priceChange !== 0 ? (analysis.priceChange > 0 ? '+' : '') + formatCurrency(analysis.priceChange) : '-'}</p><p className="text-xs text-stone-500">Price Change</p></div>
+                    <div className="bg-stone-800/30 rounded-xl p-3 text-center"><p className={`text-2xl font-bold ${analysis.consumedPercent >= 80 ? 'text-emerald-400' : analysis.consumedPercent >= 50 ? 'text-yellow-400' : 'text-red-400'}`}>{analysis.consumedPercent.toFixed(0)}%</p><p className="text-xs text-stone-500">Consumed vs Ordered</p></div>
+                  </div>
+                  <div className="bg-stone-800/20 rounded-xl p-4"><h4 className="text-sm font-semibold text-white mb-3">Orders by Outlet (This Month)</h4><div className="grid grid-cols-3 gap-3">{outlets.map(outlet => (<div key={outlet} className="bg-stone-800/30 rounded-lg p-3 text-center"><p className="text-lg font-bold text-white">{analysis.thisMonthOrdersByOutlet[outlet].qty}</p><p className="text-xs text-stone-500">{outlet}</p><p className="text-xs text-purple-400">{formatCurrency(analysis.thisMonthOrdersByOutlet[outlet].cost)}</p></div>))}</div></div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 text-center"><p className="text-xl font-bold text-emerald-400">{analysis.totalOrdered}</p><p className="text-xs text-stone-500">Total Ordered</p></div>
+                    <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 text-center"><p className="text-xl font-bold text-blue-400">{analysis.thisMonthOrdered}</p><p className="text-xs text-stone-500">This Month</p></div>
+                    <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 text-center"><p className="text-xl font-bold text-red-400">{analysis.totalConsumed}</p><p className="text-xs text-stone-500">Total Consumed</p></div>
+                    <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-3 text-center"><p className="text-xl font-bold text-purple-400">{analysis.thisMonthConsumed}</p><p className="text-xs text-stone-500">Consumed This Month</p></div>
+                  </div>
+                  {analysis.lastUpdated && <p className="text-xs text-stone-500 text-right">Last price update: {formatDate(analysis.lastUpdated)} {analysis.updatedBy && `by ${analysis.updatedBy}`}</p>}
+                </div>
+              );
+            })()}
+          </div>
+        )}
+      </div>
+
       {/* Date Filter */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <h2 className="text-2xl font-bold text-white">Admin Dashboard</h2>
