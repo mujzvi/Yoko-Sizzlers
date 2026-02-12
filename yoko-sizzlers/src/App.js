@@ -3095,7 +3095,10 @@ function CentralKitchenDashboard({ user, items, categories, orders, revenueData,
       // Call Claude API for extraction
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
         body: JSON.stringify({
           model: 'claude-sonnet-4-20250514',
           max_tokens: 4000,
@@ -3134,6 +3137,11 @@ If you cannot extract prices or the PDF is not a price list, return: []`
         })
       });
       
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`API Error: ${response.status} - ${errorText}`);
+      }
+      
       const data = await response.json();
       const text = data.content?.[0]?.text || '[]';
       
@@ -3157,7 +3165,12 @@ If you cannot extract prices or the PDF is not a price list, return: []`
       }
     } catch (err) {
       console.error('PDF extraction error:', err);
-      setPdfExtractError(err.message || 'Failed to process PDF');
+      // Check if it's a CORS/network error
+      if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+        setPdfExtractError('Cannot connect to AI service. This feature requires an API key to be configured. Please update prices manually for now.');
+      } else {
+        setPdfExtractError(err.message || 'Failed to process PDF');
+      }
     } finally {
       setPdfExtracting(false);
     }
@@ -4411,14 +4424,14 @@ If you cannot extract prices or the PDF is not a price list, return: []`
       {/* PRICES TAB */}
       {activeTab === 'prices' && (
         <div className="space-y-4">
-          {/* PDF Price Extraction Card */}
+          {/* Bulk Price Update Card */}
           <div className="bg-gradient-to-r from-violet-500/20 to-purple-500/20 border border-violet-500/30 rounded-2xl p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <span className="text-3xl">📄</span>
+                <span className="text-3xl">📋</span>
                 <div>
-                  <h3 className="text-lg font-semibold text-violet-400">AI Price Extraction</h3>
-                  <p className="text-sm text-stone-400">Upload vendor invoice/price list PDF to auto-update prices</p>
+                  <h3 className="text-lg font-semibold text-violet-400">Bulk Price Update</h3>
+                  <p className="text-sm text-stone-400">Paste price list to update multiple items at once</p>
                 </div>
               </div>
               <button
@@ -4426,9 +4439,9 @@ If you cannot extract prices or the PDF is not a price list, return: []`
                 className="px-4 py-2 bg-violet-500 text-white rounded-xl font-medium hover:bg-violet-600 transition-colors flex items-center gap-2"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                 </svg>
-                Upload PDF
+                Bulk Update
               </button>
             </div>
           </div>
@@ -4442,8 +4455,8 @@ If you cannot extract prices or the PDF is not a price list, return: []`
                     <div className="flex items-center gap-3">
                       <span className="text-2xl">🤖</span>
                       <div>
-                        <h3 className="text-lg font-semibold text-white">AI Price Extraction</h3>
-                        <p className="text-sm text-stone-400">Upload a vendor invoice or price list</p>
+                        <h3 className="text-lg font-semibold text-white">Bulk Price Update</h3>
+                        <p className="text-sm text-stone-400">Paste item names and prices to update in bulk</p>
                       </div>
                     </div>
                     <button
@@ -4458,37 +4471,24 @@ If you cannot extract prices or the PDF is not a price list, return: []`
                 </div>
                 
                 <div className="p-6 overflow-y-auto max-h-[60vh]">
-                  {/* Upload Section */}
-                  {!pdfExtractedPrices.length && !pdfExtracting && (
+                  {/* Bulk Text Input Section */}
+                  {!pdfMatchedItems.length && !pdfExtracting && (
                     <div className="space-y-4">
-                      <div 
-                        className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
-                          pdfFile ? 'border-violet-500 bg-violet-500/10' : 'border-stone-700 hover:border-stone-600'
-                        }`}
-                      >
-                        <input
-                          type="file"
-                          accept=".pdf"
-                          onChange={(e) => { setPdfFile(e.target.files[0]); setPdfExtractError(null); }}
-                          className="hidden"
-                          id="pdf-upload"
-                        />
-                        <label htmlFor="pdf-upload" className="cursor-pointer">
-                          {pdfFile ? (
-                            <div className="space-y-2">
-                              <span className="text-4xl">✅</span>
-                              <p className="text-white font-medium">{pdfFile.name}</p>
-                              <p className="text-xs text-stone-500">{(pdfFile.size / 1024).toFixed(1)} KB</p>
-                            </div>
-                          ) : (
-                            <div className="space-y-2">
-                              <span className="text-4xl">📤</span>
-                              <p className="text-white font-medium">Drop PDF here or click to upload</p>
-                              <p className="text-xs text-stone-500">Supported: Vendor invoices, price lists, quotations</p>
-                            </div>
-                          )}
-                        </label>
+                      <div className="bg-stone-800/50 rounded-xl p-4">
+                        <p className="text-sm text-stone-300 mb-2">Paste your price list in this format (one per line):</p>
+                        <p className="text-xs text-stone-500 font-mono mb-3">Item Name, Price</p>
+                        <p className="text-xs text-stone-500">Example:</p>
+                        <p className="text-xs text-stone-400 font-mono">Chicken Boneless, 280</p>
+                        <p className="text-xs text-stone-400 font-mono">Eggs, 7.50</p>
+                        <p className="text-xs text-stone-400 font-mono">Butter, 550</p>
                       </div>
+                      
+                      <textarea
+                        value={pdfFile || ''}
+                        onChange={(e) => setPdfFile(e.target.value)}
+                        placeholder="Paste your price list here..."
+                        className="w-full h-48 px-4 py-3 bg-stone-800 border border-stone-700 rounded-xl text-white placeholder-stone-500 font-mono text-sm resize-none"
+                      />
                       
                       {pdfExtractError && (
                         <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-sm">
@@ -4497,15 +4497,78 @@ If you cannot extract prices or the PDF is not a price list, return: []`
                       )}
                       
                       <button
-                        onClick={extractPricesFromPdf}
-                        disabled={!pdfFile}
+                        onClick={() => {
+                          if (!pdfFile || !pdfFile.trim()) return;
+                          setPdfExtracting(true);
+                          setPdfExtractError(null);
+                          
+                          try {
+                            const lines = pdfFile.split('\n').filter(l => l.trim());
+                            const matched = [];
+                            
+                            lines.forEach(line => {
+                              // Parse "Item Name, Price" or "Item Name - Price" or "Item Name  Price"
+                              const parts = line.split(/[,\-\t]|\s{2,}/).map(p => p.trim()).filter(Boolean);
+                              if (parts.length >= 2) {
+                                const itemName = parts[0];
+                                const price = parseFloat(parts[parts.length - 1].replace(/[₹,]/g, ''));
+                                
+                                if (!isNaN(price)) {
+                                  // Find matching item
+                                  const itemNameLower = itemName.toLowerCase();
+                                  const matchedItem = items.find(i => {
+                                    const iNameLower = i.name.toLowerCase();
+                                    return iNameLower === itemNameLower || 
+                                           iNameLower.includes(itemNameLower) || 
+                                           itemNameLower.includes(iNameLower) ||
+                                           // Check if most words match
+                                           itemNameLower.split(' ').filter(w => iNameLower.includes(w)).length >= 2;
+                                  });
+                                  
+                                  if (matchedItem) {
+                                    matched.push({
+                                      pdfItemName: itemName,
+                                      pdfPrice: price,
+                                      matchedItemId: matchedItem.id,
+                                      matchedItemName: matchedItem.name,
+                                      currentItem: matchedItem,
+                                      confidence: matchedItem.name.toLowerCase() === itemNameLower ? 'high' : 'medium',
+                                      selected: true,
+                                    });
+                                  } else {
+                                    matched.push({
+                                      pdfItemName: itemName,
+                                      pdfPrice: price,
+                                      matchedItemId: null,
+                                      matchedItemName: null,
+                                      currentItem: null,
+                                      confidence: 'low',
+                                      selected: false,
+                                    });
+                                  }
+                                }
+                              }
+                            });
+                            
+                            if (matched.length === 0) {
+                              setPdfExtractError('No valid price entries found. Use format: Item Name, Price');
+                            } else {
+                              setPdfMatchedItems(matched);
+                            }
+                          } catch (err) {
+                            setPdfExtractError('Failed to parse price list: ' + err.message);
+                          } finally {
+                            setPdfExtracting(false);
+                          }
+                        }}
+                        disabled={!pdfFile || !pdfFile.trim()}
                         className={`w-full py-3 rounded-xl font-medium transition-all flex items-center justify-center gap-2 ${
-                          pdfFile 
+                          pdfFile && pdfFile.trim()
                             ? 'bg-violet-500 text-white hover:bg-violet-600' 
                             : 'bg-stone-800 text-stone-500 cursor-not-allowed'
                         }`}
                       >
-                        <span>🔍</span> Extract Prices with AI
+                        <span>🔍</span> Match & Preview Prices
                       </button>
                     </div>
                   )}
@@ -4514,8 +4577,7 @@ If you cannot extract prices or the PDF is not a price list, return: []`
                   {pdfExtracting && (
                     <div className="text-center py-12">
                       <div className="w-16 h-16 border-4 border-violet-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                      <p className="text-white font-medium">Analyzing PDF with AI...</p>
-                      <p className="text-sm text-stone-500 mt-1">This may take 10-20 seconds</p>
+                      <p className="text-white font-medium">Processing...</p>
                     </div>
                   )}
                   
