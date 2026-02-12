@@ -921,18 +921,23 @@ export default function YokoSizzlersApp() {
   };
 
   const updateRevenueDataFn = async (newRevenueData) => {
-    // Convert nested object to rows and upsert
-    const rows = [];
-    Object.entries(newRevenueData).forEach(([outlet, months]) => {
-      Object.entries(months).forEach(([month, revenue]) => {
-        rows.push({ outlet, month: Number(month), revenue: Number(revenue) });
-      });
-    });
-    
+    // Update each revenue entry individually using PATCH
     try {
-      console.log('Saving revenue data to Supabase:', rows);
-      const result = await supaRest.upsert('revenue_data', rows, 'outlet,month');
-      console.log('Revenue save result:', result);
+      for (const [outlet, months] of Object.entries(newRevenueData)) {
+        for (const [month, revenue] of Object.entries(months)) {
+          const url = `${REST_URL}/revenue_data?outlet=eq.${encodeURIComponent(outlet)}&month=eq.${month}`;
+          const res = await fetch(url, {
+            method: 'PATCH',
+            headers: { ...supaHeaders, 'Accept': 'application/json', 'Prefer': 'return=representation' },
+            body: JSON.stringify({ revenue: Number(revenue) }),
+          });
+          if (!res.ok) {
+            const errText = await res.text();
+            console.error('Update revenue error:', errText);
+          }
+        }
+      }
+      console.log('Revenue saved successfully');
     } catch (e) { 
       console.error('Update revenue error:', e);
       alert('Failed to save revenue: ' + e.message);
