@@ -2918,6 +2918,14 @@ function CentralKitchenDashboard({ user, items, categories, orders, revenueData,
   const [editingItemId, setEditingItemId] = useState(null);
   const [editingItemData, setEditingItemData] = useState({ unit: '', pkg: '', wt: '' });
   
+  // PDF Price Extraction state
+  const [showPdfExtractor, setShowPdfExtractor] = useState(false);
+  const [pdfFile, setPdfFile] = useState(null);
+  const [pdfExtracting, setPdfExtracting] = useState(false);
+  const [pdfExtractedPrices, setPdfExtractedPrices] = useState([]);
+  const [pdfExtractError, setPdfExtractError] = useState(null);
+  const [pdfMatchedItems, setPdfMatchedItems] = useState([]);
+  
   // Custom metrics (stored in localStorage, can be added by CK)
   const [unitOptions, setUnitOptions] = useState(() => {
     const saved = localStorage.getItem('yokoUnitOptions');
@@ -3061,6 +3069,150 @@ function CentralKitchenDashboard({ user, items, categories, orders, revenueData,
       setNewPackagingOption('');
       setShowAddPackaging(false);
     }
+  };
+
+  // PDF Price Extraction with AI
+  const extractPricesFromPdf = async () => {
+    if (!pdfFile) return;
+    
+    setPdfExtracting(true);
+    setPdfExtractError(null);
+    setPdfExtractedPrices([]);
+    setPdfMatchedItems([]);
+    
+    try {
+      // Read PDF as base64
+      const base64Data = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = () => reject(new Error('Failed to read PDF'));
+        reader.readAsDataURL(pdfFile);
+      });
+      
+      // Create item list for matching
+      const itemList = items.map(i => ({ id: i.id, name: i.name, currentPrice: i.price, unit: i.unit }));
+      
+      // Call Claude API for extraction
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 4000,
+          messages: [{
+            role: 'user',
+            content: [
+              {
+                type: 'document',
+                source: { type: 'base64', media_type: 'application/pdf', data: base64Data }
+              },
+              {
+                type: 'text',
+                text: `Extract all item prices from this vendor invoice/price list PDF. 
+
+Here are our inventory items to match against:
+${JSON.stringify(itemList, null, 2)}
+
+For each price you find in the PDF, try to match it to one of our inventory items by name (fuzzy match is OK - e.g., "Chicken Breast" matches "Boneless Chicken Breast").
+
+Return ONLY a JSON array with this format, no other text:
+[
+  {
+    "pdfItemName": "exact name from PDF",
+    "pdfPrice": 123.45,
+    "pdfUnit": "kg or piece or unit from PDF",
+    "matchedItemId": 123 or null if no match,
+    "matchedItemName": "our item name" or null,
+    "confidence": "high" or "medium" or "low"
+  }
+]
+
+If you cannot extract prices or the PDF is not a price list, return: []`
+              }
+            ]
+          }]
+        })
+      });
+      
+      const data = await response.json();
+      const text = data.content?.[0]?.text || '[]';
+      
+      // Parse JSON from response
+      const jsonMatch = text.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        const extracted = JSON.parse(jsonMatch[0]);
+        setPdfExtractedPrices(extracted);
+        
+        // Create matched items list for review
+        const matched = extracted
+          .filter(e => e.matchedItemId)
+          .map(e => ({
+            ...e,
+            currentItem: items.find(i => i.id === e.matchedItemId),
+            selected: true,
+          }));
+        setPdfMatchedItems(matched);
+      } else {
+        setPdfExtractError('Could not extract prices from this PDF. Make sure it contains a price list or invoice.');
+      }
+    } catch (err) {
+      console.error('PDF extraction error:', err);
+      setPdfExtractError(err.message || 'Failed to process PDF');
+    } finally {
+      setPdfExtracting(false);
+    }
+  };
+
+  // Apply extracted prices to items
+  const applyExtractedPrices = () => {
+    const selectedMatches = pdfMatchedItems.filter(m => m.selected && m.matchedItemId);
+    if (selectedMatches.length === 0) return;
+    
+    const updatedItems = items.map(item => {
+      const match = selectedMatches.find(m => m.matchedItemId === item.id);
+      if (match) {
+        const newPrice = match.pdfPrice;
+        const previousPrice = item.price;
+        const priceChange = newPrice - previousPrice;
+        const priceChangePercent = previousPrice > 0 ? ((priceChange / previousPrice) * 100) : 0;
+        
+        return {
+          ...item,
+          price: newPrice,
+          lastUpdated: new Date().toISOString(),
+          updatedBy: 'PDF Import',
+          previousPrice: previousPrice,
+          priceChange: priceChange,
+          priceChangePercent: priceChangePercent,
+          priceHistory: [
+            ...(item.priceHistory || []),
+            {
+              price: previousPrice,
+              changedAt: new Date().toISOString(),
+              changedTo: newPrice,
+              changedBy: 'PDF Import'
+            }
+          ].slice(-10)
+        };
+      }
+      return item;
+    });
+    
+    onUpdateItems(updatedItems);
+    
+    // Reset state
+    setShowPdfExtractor(false);
+    setPdfFile(null);
+    setPdfExtractedPrices([]);
+    setPdfMatchedItems([]);
+    alert(`Updated prices for ${selectedMatches.length} item(s)`);
+  };
+
+  // Toggle match selection
+  const toggleMatchSelection = (index) => {
+    setPdfMatchedItems(prev => prev.map((m, i) => 
+      i === index ? { ...m, selected: !m.selected } : m
+    ));
   };
 
   // Pending orders that need review
@@ -4259,6 +4411,216 @@ function CentralKitchenDashboard({ user, items, categories, orders, revenueData,
       {/* PRICES TAB */}
       {activeTab === 'prices' && (
         <div className="space-y-4">
+          {/* PDF Price Extraction Card */}
+          <div className="bg-gradient-to-r from-violet-500/20 to-purple-500/20 border border-violet-500/30 rounded-2xl p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-3xl">📄</span>
+                <div>
+                  <h3 className="text-lg font-semibold text-violet-400">AI Price Extraction</h3>
+                  <p className="text-sm text-stone-400">Upload vendor invoice/price list PDF to auto-update prices</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowPdfExtractor(true)}
+                className="px-4 py-2 bg-violet-500 text-white rounded-xl font-medium hover:bg-violet-600 transition-colors flex items-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                Upload PDF
+              </button>
+            </div>
+          </div>
+
+          {/* PDF Extractor Modal */}
+          {showPdfExtractor && (
+            <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+              <div className="bg-stone-900 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden animate-modal-in">
+                <div className="p-6 border-b border-stone-800">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">🤖</span>
+                      <div>
+                        <h3 className="text-lg font-semibold text-white">AI Price Extraction</h3>
+                        <p className="text-sm text-stone-400">Upload a vendor invoice or price list</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => { setShowPdfExtractor(false); setPdfFile(null); setPdfExtractedPrices([]); setPdfMatchedItems([]); setPdfExtractError(null); }}
+                      className="p-2 text-stone-400 hover:text-white hover:bg-stone-800 rounded-lg transition-colors"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="p-6 overflow-y-auto max-h-[60vh]">
+                  {/* Upload Section */}
+                  {!pdfExtractedPrices.length && !pdfExtracting && (
+                    <div className="space-y-4">
+                      <div 
+                        className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
+                          pdfFile ? 'border-violet-500 bg-violet-500/10' : 'border-stone-700 hover:border-stone-600'
+                        }`}
+                      >
+                        <input
+                          type="file"
+                          accept=".pdf"
+                          onChange={(e) => { setPdfFile(e.target.files[0]); setPdfExtractError(null); }}
+                          className="hidden"
+                          id="pdf-upload"
+                        />
+                        <label htmlFor="pdf-upload" className="cursor-pointer">
+                          {pdfFile ? (
+                            <div className="space-y-2">
+                              <span className="text-4xl">✅</span>
+                              <p className="text-white font-medium">{pdfFile.name}</p>
+                              <p className="text-xs text-stone-500">{(pdfFile.size / 1024).toFixed(1)} KB</p>
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              <span className="text-4xl">📤</span>
+                              <p className="text-white font-medium">Drop PDF here or click to upload</p>
+                              <p className="text-xs text-stone-500">Supported: Vendor invoices, price lists, quotations</p>
+                            </div>
+                          )}
+                        </label>
+                      </div>
+                      
+                      {pdfExtractError && (
+                        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-sm">
+                          {pdfExtractError}
+                        </div>
+                      )}
+                      
+                      <button
+                        onClick={extractPricesFromPdf}
+                        disabled={!pdfFile}
+                        className={`w-full py-3 rounded-xl font-medium transition-all flex items-center justify-center gap-2 ${
+                          pdfFile 
+                            ? 'bg-violet-500 text-white hover:bg-violet-600' 
+                            : 'bg-stone-800 text-stone-500 cursor-not-allowed'
+                        }`}
+                      >
+                        <span>🔍</span> Extract Prices with AI
+                      </button>
+                    </div>
+                  )}
+                  
+                  {/* Loading State */}
+                  {pdfExtracting && (
+                    <div className="text-center py-12">
+                      <div className="w-16 h-16 border-4 border-violet-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                      <p className="text-white font-medium">Analyzing PDF with AI...</p>
+                      <p className="text-sm text-stone-500 mt-1">This may take 10-20 seconds</p>
+                    </div>
+                  )}
+                  
+                  {/* Results Section */}
+                  {pdfMatchedItems.length > 0 && !pdfExtracting && (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <p className="text-white font-medium">
+                          Found {pdfMatchedItems.length} matching item(s)
+                        </p>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setPdfMatchedItems(prev => prev.map(m => ({ ...m, selected: true })))}
+                            className="px-3 py-1 bg-stone-800 text-stone-300 rounded-lg text-sm hover:bg-stone-700"
+                          >
+                            Select All
+                          </button>
+                          <button
+                            onClick={() => setPdfMatchedItems(prev => prev.map(m => ({ ...m, selected: false })))}
+                            className="px-3 py-1 bg-stone-800 text-stone-300 rounded-lg text-sm hover:bg-stone-700"
+                          >
+                            Deselect All
+                          </button>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2 max-h-64 overflow-y-auto">
+                        {pdfMatchedItems.map((match, idx) => (
+                          <div 
+                            key={idx}
+                            onClick={() => toggleMatchSelection(idx)}
+                            className={`p-3 rounded-xl border cursor-pointer transition-all ${
+                              match.selected 
+                                ? 'bg-violet-500/10 border-violet-500/50' 
+                                : 'bg-stone-800/30 border-stone-700/50 opacity-60'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                                match.selected ? 'bg-violet-500 border-violet-500' : 'border-stone-600'
+                              }`}>
+                                {match.selected && (
+                                  <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                )}
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <p className="text-white font-medium">{match.matchedItemName}</p>
+                                  <span className={`px-1.5 py-0.5 text-xs rounded ${
+                                    match.confidence === 'high' ? 'bg-emerald-500/20 text-emerald-400' :
+                                    match.confidence === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
+                                    'bg-orange-500/20 text-orange-400'
+                                  }`}>{match.confidence}</span>
+                                </div>
+                                <p className="text-xs text-stone-500">PDF: "{match.pdfItemName}"</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-stone-500 line-through text-sm">₹{match.currentItem?.price?.toFixed(2)}</p>
+                                <p className="text-emerald-400 font-semibold">₹{match.pdfPrice?.toFixed(2)}</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      {/* Unmatched items info */}
+                      {pdfExtractedPrices.filter(e => !e.matchedItemId).length > 0 && (
+                        <div className="bg-stone-800/30 rounded-xl p-3">
+                          <p className="text-xs text-stone-500">
+                            {pdfExtractedPrices.filter(e => !e.matchedItemId).length} item(s) from PDF couldn't be matched to inventory
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+                
+                {/* Footer */}
+                {pdfMatchedItems.length > 0 && !pdfExtracting && (
+                  <div className="p-6 border-t border-stone-800 flex gap-3">
+                    <button
+                      onClick={() => { setPdfFile(null); setPdfExtractedPrices([]); setPdfMatchedItems([]); }}
+                      className="flex-1 py-3 bg-stone-800 text-white rounded-xl font-medium hover:bg-stone-700 transition-colors"
+                    >
+                      Upload Different PDF
+                    </button>
+                    <button
+                      onClick={applyExtractedPrices}
+                      disabled={!pdfMatchedItems.some(m => m.selected)}
+                      className={`flex-1 py-3 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 ${
+                        pdfMatchedItems.some(m => m.selected)
+                          ? 'bg-emerald-500 text-white hover:bg-emerald-600'
+                          : 'bg-stone-800 text-stone-500 cursor-not-allowed'
+                      }`}
+                    >
+                      <span>✓</span> Apply {pdfMatchedItems.filter(m => m.selected).length} Price(s)
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Category Filter */}
           <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-4">
             <div className="flex flex-wrap items-center gap-3">
