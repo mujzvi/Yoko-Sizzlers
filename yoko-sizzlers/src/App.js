@@ -587,45 +587,6 @@ function GlobalStyles() {
     `}</style>
   );
 }
-      
-      /* Number change animation */
-      .number-animate { transition: all 0.3s ease-out; }
-      
-      /* Ripple effect for buttons */
-      .ripple { position: relative; overflow: hidden; }
-      .ripple::after {
-        content: '';
-        position: absolute;
-        inset: 0;
-        background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%);
-        transform: scale(0);
-        opacity: 0;
-        transition: transform 0.5s, opacity 0.3s;
-      }
-      .ripple:active::after {
-        transform: scale(2);
-        opacity: 1;
-        transition: transform 0s, opacity 0s;
-      }
-      
-      /* Progress bar animation */
-      .progress-animate {
-        transition: width 1s ease-out;
-      }
-      
-      /* Stagger children animation */
-      .stagger-children > * {
-        animation: slide-up 0.4s ease-out backwards;
-      }
-      .stagger-children > *:nth-child(1) { animation-delay: 0s; }
-      .stagger-children > *:nth-child(2) { animation-delay: 0.05s; }
-      .stagger-children > *:nth-child(3) { animation-delay: 0.1s; }
-      .stagger-children > *:nth-child(4) { animation-delay: 0.15s; }
-      .stagger-children > *:nth-child(5) { animation-delay: 0.2s; }
-      .stagger-children > *:nth-child(6) { animation-delay: 0.25s; }
-    `}</style>
-  );
-}
 
 // Animation Hook for counting numbers
 const useCountAnimation = (target, duration = 1000) => {
