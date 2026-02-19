@@ -129,6 +129,29 @@ function GlobalStyles() {
         from { opacity: 0; transform: translateY(10px); }
         to { opacity: 1; transform: translateY(0); }
       }
+      @keyframes blob {
+        0%, 100% { transform: translate(0, 0) scale(1); }
+        25% { transform: translate(20px, -30px) scale(1.1); }
+        50% { transform: translate(-20px, 20px) scale(0.9); }
+        75% { transform: translate(30px, 10px) scale(1.05); }
+      }
+      @keyframes pulse-glow {
+        0%, 100% { box-shadow: 0 0 20px rgba(251, 191, 36, 0.3); }
+        50% { box-shadow: 0 0 40px rgba(251, 191, 36, 0.5); }
+      }
+      @keyframes scale-in {
+        from { opacity: 0; transform: scale(0.9); }
+        to { opacity: 1; transform: scale(1); }
+      }
+      @keyframes float {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-10px); }
+      }
+      @keyframes shimmer {
+        0% { background-position: -200% 0; }
+        100% { background-position: 200% 0; }
+      }
+      
       .animate-modal-in { animation: modal-in 0.3s ease-out; }
       .animate-fade-in { animation: fade-in 0.3s ease-out; }
       .animate-slide-up { animation: slide-up 0.4s ease-out; }
@@ -138,6 +161,12 @@ function GlobalStyles() {
       .animate-shake { animation: shake 0.3s ease-out; }
       .animate-pop { animation: pop 0.2s ease-out; }
       .animate-count-up { animation: count-up 0.3s ease-out; }
+      .animate-blob { animation: blob 8s ease-in-out infinite; }
+      .animate-pulse-glow { animation: pulse-glow 3s ease-in-out infinite; }
+      .animate-scale-in { animation: scale-in 0.4s ease-out backwards; }
+      .animate-float { animation: float 3s ease-in-out infinite; }
+      .animation-delay-2000 { animation-delay: 2s; }
+      .animation-delay-4000 { animation-delay: 4s; }
       
       /* Button press effect */
       .btn-press:active { transform: scale(0.96); }
@@ -146,8 +175,418 @@ function GlobalStyles() {
       .tab-content { animation: fade-in 0.2s ease-out; }
       
       /* Card hover lift */
-      .card-hover { transition: transform 0.2s, box-shadow 0.2s; }
-      .card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+      .card-hover { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+      .card-hover:hover { transform: translateY(-4px); }
+      
+      /* Liquid Glass Styles */
+      .glass-bg {
+        background: linear-gradient(135deg, rgba(250,250,249,0.95) 0%, rgba(245,245,244,0.9) 50%, rgba(255,251,235,0.85) 100%);
+      }
+      
+      .glass-card {
+        background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-radius: 24px;
+        border: 1px solid rgba(255,255,255,0.9);
+        box-shadow: 
+          0 16px 48px rgba(0,0,0,0.08),
+          0 4px 16px rgba(0,0,0,0.04),
+          inset 0 2px 4px rgba(255,255,255,1),
+          inset 0 -1px 2px rgba(0,0,0,0.02);
+        transition: all 0.3s ease;
+      }
+      .glass-card:hover {
+        box-shadow: 
+          0 20px 60px rgba(0,0,0,0.12),
+          0 8px 24px rgba(0,0,0,0.06),
+          inset 0 2px 4px rgba(255,255,255,1);
+      }
+      
+      .glass-card-dark {
+        background: linear-gradient(135deg, rgba(41,37,36,0.95) 0%, rgba(28,25,23,0.9) 100%);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-radius: 24px;
+        border: 1px solid rgba(68,64,60,0.5);
+        box-shadow: 
+          0 16px 48px rgba(0,0,0,0.3),
+          0 4px 16px rgba(0,0,0,0.2),
+          inset 0 1px 2px rgba(255,255,255,0.05),
+          inset 0 -1px 2px rgba(0,0,0,0.2);
+        transition: all 0.3s ease;
+      }
+      .glass-card-dark:hover {
+        box-shadow: 
+          0 24px 64px rgba(0,0,0,0.4),
+          0 8px 24px rgba(0,0,0,0.25),
+          inset 0 1px 2px rgba(255,255,255,0.08);
+        border-color: rgba(251,191,36,0.3);
+      }
+      
+      .glass-input {
+        padding: 14px 18px;
+        background: rgba(255,255,255,0.6);
+        border: 1px solid rgba(255,255,255,0.8);
+        border-radius: 16px;
+        color: #1c1917;
+        font-size: 15px;
+        outline: none;
+        transition: all 0.3s ease;
+        box-shadow: 
+          inset 0 2px 4px rgba(0,0,0,0.02),
+          0 2px 8px rgba(0,0,0,0.04);
+      }
+      .glass-input:focus {
+        background: rgba(255,255,255,0.9);
+        border-color: rgba(251,191,36,0.5);
+        box-shadow: 
+          0 0 0 4px rgba(251,191,36,0.15),
+          inset 0 2px 4px rgba(0,0,0,0.02);
+      }
+      
+      .glass-input-dark {
+        padding: 14px 18px;
+        background: rgba(41,37,36,0.6);
+        border: 1px solid rgba(68,64,60,0.5);
+        border-radius: 16px;
+        color: #fafaf9;
+        font-size: 15px;
+        outline: none;
+        transition: all 0.3s ease;
+        box-shadow: 
+          inset 0 2px 4px rgba(0,0,0,0.1),
+          0 2px 8px rgba(0,0,0,0.1);
+      }
+      .glass-input-dark:focus {
+        background: rgba(41,37,36,0.8);
+        border-color: rgba(251,191,36,0.5);
+        box-shadow: 
+          0 0 0 4px rgba(251,191,36,0.15),
+          inset 0 2px 4px rgba(0,0,0,0.1);
+      }
+      .glass-input-dark::placeholder {
+        color: #78716c;
+      }
+      
+      .glass-button {
+        position: relative;
+        padding: 14px 24px;
+        background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%);
+        border: 1px solid rgba(255,255,255,0.9);
+        border-radius: 16px;
+        color: #44403c;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 
+          0 4px 16px rgba(0,0,0,0.06),
+          inset 0 2px 4px rgba(255,255,255,1),
+          inset 0 -2px 4px rgba(0,0,0,0.02);
+      }
+      .glass-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 
+          0 8px 24px rgba(0,0,0,0.1),
+          inset 0 2px 4px rgba(255,255,255,1);
+      }
+      .glass-button:active {
+        transform: translateY(0) scale(0.98);
+      }
+      
+      .glass-button-primary {
+        position: relative;
+        padding: 14px 24px;
+        background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+        border: none;
+        border-radius: 16px;
+        color: white;
+        font-weight: 600;
+        cursor: pointer;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        box-shadow: 
+          0 4px 16px rgba(251,191,36,0.4),
+          inset 0 2px 4px rgba(255,255,255,0.3),
+          inset 0 -2px 4px rgba(0,0,0,0.1);
+      }
+      .glass-button-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 
+          0 8px 24px rgba(251,191,36,0.5),
+          inset 0 2px 4px rgba(255,255,255,0.3);
+      }
+      .glass-button-primary:active {
+        transform: translateY(0) scale(0.98);
+      }
+      .glass-button-primary:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+      }
+      
+      .glass-button-danger {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        box-shadow: 
+          0 4px 16px rgba(239,68,68,0.4),
+          inset 0 2px 4px rgba(255,255,255,0.2);
+      }
+      .glass-button-danger:hover {
+        box-shadow: 
+          0 8px 24px rgba(239,68,68,0.5),
+          inset 0 2px 4px rgba(255,255,255,0.2);
+      }
+      
+      .glass-button-success {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        box-shadow: 
+          0 4px 16px rgba(16,185,129,0.4),
+          inset 0 2px 4px rgba(255,255,255,0.2);
+      }
+      .glass-button-success:hover {
+        box-shadow: 
+          0 8px 24px rgba(16,185,129,0.5),
+          inset 0 2px 4px rgba(255,255,255,0.2);
+      }
+      
+      .glass-stat-card {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 20px;
+        background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%);
+        border-radius: 20px;
+        border: 1px solid rgba(255,255,255,0.9);
+        box-shadow: 
+          0 8px 32px rgba(0,0,0,0.06),
+          inset 0 2px 4px rgba(255,255,255,1);
+        transition: all 0.3s ease;
+      }
+      .glass-stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 
+          0 16px 48px rgba(0,0,0,0.1),
+          inset 0 2px 4px rgba(255,255,255,1);
+      }
+      
+      .glass-stat-card-dark {
+        background: linear-gradient(135deg, rgba(41,37,36,0.9) 0%, rgba(28,25,23,0.8) 100%);
+        border: 1px solid rgba(68,64,60,0.5);
+        box-shadow: 
+          0 8px 32px rgba(0,0,0,0.2),
+          inset 0 1px 2px rgba(255,255,255,0.05);
+      }
+      .glass-stat-card-dark:hover {
+        box-shadow: 
+          0 16px 48px rgba(0,0,0,0.3),
+          inset 0 1px 2px rgba(255,255,255,0.08);
+        border-color: rgba(251,191,36,0.3);
+      }
+      
+      .glass-icon {
+        width: 56px;
+        height: 56px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255,255,255,0.8);
+        border-radius: 16px;
+        border: 1px solid rgba(255,255,255,1);
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+      }
+      
+      .glass-icon-dark {
+        background: rgba(41,37,36,0.8);
+        border: 1px solid rgba(68,64,60,0.5);
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+      }
+      
+      .glass-tabs {
+        display: flex;
+        gap: 8px;
+        padding: 8px;
+        background: rgba(255,255,255,0.6);
+        border-radius: 20px;
+        border: 1px solid rgba(255,255,255,0.8);
+        box-shadow: 0 4px 24px rgba(0,0,0,0.04);
+        overflow-x: auto;
+      }
+      
+      .glass-tabs-dark {
+        background: rgba(28,25,23,0.6);
+        border: 1px solid rgba(68,64,60,0.3);
+        box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+      }
+      
+      .glass-tab {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 20px;
+        border-radius: 14px;
+        font-weight: 500;
+        color: #78716c;
+        transition: all 0.3s ease;
+        white-space: nowrap;
+        border: 1px solid transparent;
+      }
+      .glass-tab:hover {
+        background: rgba(255,255,255,0.6);
+        color: #44403c;
+      }
+      .glass-tab.active {
+        background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+        color: white;
+        box-shadow: 
+          0 4px 16px rgba(251,191,36,0.4),
+          inset 0 2px 4px rgba(255,255,255,0.2);
+      }
+      
+      .glass-tab-dark {
+        color: #a8a29e;
+      }
+      .glass-tab-dark:hover {
+        background: rgba(68,64,60,0.4);
+        color: #e7e5e4;
+      }
+      .glass-tab-dark.active {
+        background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+        color: white;
+      }
+      
+      .glass-header {
+        background: linear-gradient(to bottom, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.85) 100%);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-bottom: 1px solid rgba(255,255,255,0.8);
+        box-shadow: 0 4px 30px rgba(0,0,0,0.05);
+      }
+      
+      .glass-header-dark {
+        background: linear-gradient(to bottom, rgba(28,25,23,0.95) 0%, rgba(28,25,23,0.85) 100%);
+        border-bottom: 1px solid rgba(68,64,60,0.3);
+        box-shadow: 0 4px 30px rgba(0,0,0,0.2);
+      }
+      
+      .glass-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 24px;
+        height: 24px;
+        padding: 0 8px;
+        background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+        color: white;
+        font-size: 12px;
+        font-weight: 600;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(251,191,36,0.3);
+      }
+      
+      .glass-badge-success {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        box-shadow: 0 2px 8px rgba(16,185,129,0.3);
+      }
+      
+      .glass-badge-danger {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        box-shadow: 0 2px 8px rgba(239,68,68,0.3);
+      }
+      
+      .glass-badge-info {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        box-shadow: 0 2px 8px rgba(59,130,246,0.3);
+      }
+      
+      .glass-select {
+        appearance: none;
+        padding: 14px 44px 14px 18px;
+        background: rgba(41,37,36,0.6) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2378716c'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E") no-repeat right 14px center;
+        background-size: 20px;
+        border: 1px solid rgba(68,64,60,0.5);
+        border-radius: 16px;
+        color: #fafaf9;
+        font-size: 15px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+      .glass-select:focus {
+        outline: none;
+        border-color: rgba(251,191,36,0.5);
+        box-shadow: 0 0 0 4px rgba(251,191,36,0.15);
+      }
+      
+      .glass-table {
+        border-collapse: separate;
+        border-spacing: 0 8px;
+      }
+      .glass-table th {
+        padding: 12px 16px;
+        text-align: left;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #78716c;
+      }
+      .glass-table td {
+        padding: 16px;
+        background: rgba(41,37,36,0.4);
+        border-top: 1px solid rgba(68,64,60,0.2);
+        border-bottom: 1px solid rgba(68,64,60,0.2);
+        transition: all 0.2s ease;
+      }
+      .glass-table td:first-child {
+        border-left: 1px solid rgba(68,64,60,0.2);
+        border-radius: 12px 0 0 12px;
+      }
+      .glass-table td:last-child {
+        border-right: 1px solid rgba(68,64,60,0.2);
+        border-radius: 0 12px 12px 0;
+      }
+      .glass-table tr:hover td {
+        background: rgba(68,64,60,0.4);
+      }
+      
+      .glass-modal-overlay {
+        background: rgba(0,0,0,0.6);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+      }
+      
+      .glass-scrollbar::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      .glass-scrollbar::-webkit-scrollbar-track {
+        background: rgba(68,64,60,0.2);
+        border-radius: 4px;
+      }
+      .glass-scrollbar::-webkit-scrollbar-thumb {
+        background: rgba(120,113,108,0.5);
+        border-radius: 4px;
+      }
+      .glass-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: rgba(120,113,108,0.7);
+      }
+      
+      /* Stagger children animation */
+      .stagger-children > * {
+        animation: slide-up 0.4s ease-out backwards;
+      }
+      .stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+      .stagger-children > *:nth-child(2) { animation-delay: 50ms; }
+      .stagger-children > *:nth-child(3) { animation-delay: 100ms; }
+      .stagger-children > *:nth-child(4) { animation-delay: 150ms; }
+      .stagger-children > *:nth-child(5) { animation-delay: 200ms; }
+      .stagger-children > *:nth-child(6) { animation-delay: 250ms; }
+      .stagger-children > *:nth-child(7) { animation-delay: 300ms; }
+      .stagger-children > *:nth-child(8) { animation-delay: 350ms; }
+      .stagger-children > *:nth-child(9) { animation-delay: 400ms; }
+      .stagger-children > *:nth-child(10) { animation-delay: 450ms; }
+    `}</style>
+  );
+}
       
       /* Number change animation */
       .number-animate { transition: all 0.3s ease-out; }
@@ -396,7 +835,7 @@ function AnimatedStatCard({ title, value, icon, color = 'amber', prefix = '', su
   };
 
   return (
-    <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-4 relative overflow-hidden group hover:scale-[1.02] transition-transform duration-300">
+    <div className="glass-card-dark p-4 relative overflow-hidden group hover:scale-[1.02] transition-transform duration-300">
       <div className={`absolute inset-0 bg-gradient-to-br ${colorClasses[color] || colorClasses.amber} opacity-5 group-hover:opacity-10 transition-opacity`} />
       <div className="relative">
         <div className="flex items-center justify-between mb-2">
@@ -1096,10 +1535,16 @@ export default function YokoSizzlersApp() {
   };
 
   return (
-    <div className="min-h-screen bg-stone-950">
+    <div className="min-h-screen bg-gradient-to-br from-stone-950 via-stone-900 to-stone-950 relative overflow-hidden">
+      {/* Animated background blobs */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-20 left-10 w-96 h-96 bg-amber-500/5 rounded-full blur-3xl animate-blob"></div>
+        <div className="absolute bottom-40 right-20 w-80 h-80 bg-orange-500/5 rounded-full blur-3xl animate-blob animation-delay-2000"></div>
+        <div className="absolute top-1/2 left-1/3 w-72 h-72 bg-amber-600/3 rounded-full blur-3xl animate-blob animation-delay-4000"></div>
+      </div>
       <GlobalStyles />
       <Header user={currentUser} onLogout={handleLogout} />
-      <main className="max-w-7xl mx-auto px-4 py-6">
+      <main className="relative max-w-7xl mx-auto px-4 py-6">
         {currentUser.role === 'outlet' && (
           <OutletDashboard 
             user={currentUser} 
@@ -1143,14 +1588,122 @@ export default function YokoSizzlersApp() {
 // ============================================
 function LoginScreen({ users, onLogin }) {
   const [selectedPhone, setSelectedPhone] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [isVerifyingLocation, setIsVerifyingLocation] = useState(false);
 
-  const handleLogin = () => {
+  // Outlet coordinates
+  const outletCoordinates = {
+    'Bandra': { lat: 19.056270092585304, lng: 72.83468181333015 },
+    'Santacruz': { lat: 19.077778732891147, lng: 72.83803091516391 },
+    'Oshiwara': { lat: 19.148278915321782, lng: 72.83166328691618 },
+  };
+
+  // Password map for each user type
+  const passwords = {
+    'Bandra': 'Y0koBandra@50',
+    'Santacruz': 'Yok0Cruz@54',
+    'Oshiwara': 'Y0k0Oshi@102',
+    'Central Kitchen': 'YokoCK@49',
+    'Admin': 'ysp2025#YOKO',
+  };
+
+  // Calculate distance between two coordinates in meters (Haversine formula)
+  const calculateDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371e3; // Earth's radius in meters
+    const φ1 = lat1 * Math.PI / 180;
+    const φ2 = lat2 * Math.PI / 180;
+    const Δφ = (lat2 - lat1) * Math.PI / 180;
+    const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+              Math.cos(φ1) * Math.cos(φ2) *
+              Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c; // Distance in meters
+  };
+
+  const handleLogin = async () => {
     if (!selectedPhone) {
       setError('Please select a user to login');
       return;
     }
-    onLogin(selectedPhone, users[selectedPhone]);
+    
+    const user = users[selectedPhone];
+    let expectedPassword = '';
+    
+    if (user.role === 'outlet') {
+      expectedPassword = passwords[user.outlet];
+    } else if (user.role === 'central_kitchen') {
+      expectedPassword = passwords['Central Kitchen'];
+    } else if (user.role === 'admin') {
+      expectedPassword = passwords['Admin'];
+    }
+    
+    if (password !== expectedPassword) {
+      setError('Incorrect password');
+      return;
+    }
+
+    // GPS verification only for outlet users
+    if (user.role === 'outlet') {
+      setIsVerifyingLocation(true);
+      setError('');
+      
+      try {
+        const position = await new Promise((resolve, reject) => {
+          if (!navigator.geolocation) {
+            reject(new Error('Geolocation is not supported by your browser'));
+            return;
+          }
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+          });
+        });
+
+        const userLat = position.coords.latitude;
+        const userLng = position.coords.longitude;
+        const outletCoords = outletCoordinates[user.outlet];
+        
+        if (!outletCoords) {
+          setError('Outlet location not configured');
+          setIsVerifyingLocation(false);
+          return;
+        }
+
+        const distance = calculateDistance(userLat, userLng, outletCoords.lat, outletCoords.lng);
+        const maxDistance = 30; // ~100 feet in meters
+
+        if (distance > maxDistance) {
+          setError(`You must be at ${user.outlet} outlet to login. You are ${Math.round(distance)}m away.`);
+          setIsVerifyingLocation(false);
+          return;
+        }
+
+        // Location verified, proceed with login
+        setIsVerifyingLocation(false);
+        onLogin(selectedPhone, users[selectedPhone]);
+        
+      } catch (geoError) {
+        setIsVerifyingLocation(false);
+        if (geoError.code === 1) {
+          setError('Location access denied. Please enable location services to login.');
+        } else if (geoError.code === 2) {
+          setError('Unable to determine your location. Please try again.');
+        } else if (geoError.code === 3) {
+          setError('Location request timed out. Please try again.');
+        } else {
+          setError(geoError.message || 'Location verification failed');
+        }
+      }
+    } else {
+      // CK and Admin don't need GPS verification
+      onLogin(selectedPhone, users[selectedPhone]);
+    }
   };
 
   const userList = Object.entries(users).map(([phone, user]) => ({
@@ -1161,19 +1714,19 @@ function LoginScreen({ users, onLogin }) {
   }));
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-stone-950 via-stone-900 to-amber-950 flex items-center justify-center p-4">
-      {/* Decorative background elements */}
+    <div className="min-h-screen bg-gradient-to-br from-stone-950 via-stone-900 to-amber-950 flex items-center justify-center p-4 overflow-hidden">
+      {/* Animated background blobs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-10 w-72 h-72 bg-amber-500/5 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-orange-500/5 rounded-full blur-3xl"></div>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-amber-600/3 rounded-full blur-3xl"></div>
+        <div className="absolute top-20 left-10 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl animate-blob"></div>
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl animate-blob animation-delay-2000"></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-amber-600/5 rounded-full blur-3xl animate-blob animation-delay-4000"></div>
       </div>
 
-      <div className="relative w-full max-w-md">
+      <div className="relative w-full max-w-md animate-slide-up">
         {/* Logo & Title */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 shadow-2xl shadow-amber-500/20 mb-4">
-            <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="inline-flex items-center justify-center w-24 h-24 rounded-3xl glass-card-dark shadow-2xl shadow-amber-500/20 mb-4 animate-pulse-glow">
+            <svg className="w-12 h-12 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z" />
             </svg>
@@ -1184,16 +1737,16 @@ function LoginScreen({ users, onLogin }) {
           <p className="text-amber-200/60 mt-2 text-sm tracking-widest uppercase">Purchase Order System</p>
         </div>
 
-        {/* Login Card */}
-        <div className="bg-stone-900/80 backdrop-blur-xl border border-stone-800/50 rounded-3xl p-8 shadow-2xl">
+        {/* Login Card - Liquid Glass */}
+        <div className="glass-card-dark p-8 animate-scale-in">
           <h2 className="text-xl font-semibold text-white mb-6">Sign In</h2>
-          <div className="space-y-4">
+          <div className="space-y-5">
             <div>
-              <label className="block text-sm text-stone-400 mb-2">Select User</label>
+              <label className="block text-sm text-stone-400 mb-2 font-medium">Select User</label>
               <select
                 value={selectedPhone}
-                onChange={(e) => { setSelectedPhone(e.target.value); setError(''); }}
-                className="w-full px-4 py-3.5 bg-stone-800/50 border border-stone-700/50 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500/50 transition-all"
+                onChange={(e) => { setSelectedPhone(e.target.value); setError(''); setPassword(''); }}
+                className="glass-select w-full"
               >
                 <option value="">-- Select User --</option>
                 {userList.map(user => (
@@ -1205,16 +1758,57 @@ function LoginScreen({ users, onLogin }) {
             </div>
             
             {selectedPhone && (
-              <div className="p-3 bg-stone-800/30 rounded-xl border border-stone-700/30">
-                <p className="text-xs text-stone-500 mb-1">Logging in as:</p>
-                <p className="text-white font-medium">{users[selectedPhone].name}</p>
-                <p className="text-sm text-stone-400">+91 {selectedPhone}</p>
-              </div>
+              <>
+                <div className="p-4 glass-card-dark rounded-xl border border-stone-700/30 animate-slide-up">
+                  <p className="text-xs text-stone-500 mb-1">Logging in as:</p>
+                  <p className="text-white font-medium">{users[selectedPhone].name}</p>
+                  <p className="text-sm text-stone-400">+91 {selectedPhone}</p>
+                  {users[selectedPhone].role === 'outlet' && (
+                    <p className="text-xs text-amber-400 mt-2 flex items-center gap-1">
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      GPS verification required
+                    </p>
+                  )}
+                </div>
+                
+                <div className="animate-slide-up">
+                  <label className="block text-sm text-stone-400 mb-2 font-medium">Password</label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => { setPassword(e.target.value); setError(''); }}
+                      placeholder="Enter password"
+                      className="glass-input-dark w-full pr-12"
+                      onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-500 hover:text-amber-400 transition-colors"
+                    >
+                      {showPassword ? (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                        </svg>
+                      ) : (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </>
             )}
 
             {error && (
-              <p className="text-red-400 text-sm flex items-center gap-2">
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <p className="text-red-400 text-sm flex items-center gap-2 animate-shake">
+                <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                 </svg>
                 {error}
@@ -1222,9 +1816,26 @@ function LoginScreen({ users, onLogin }) {
             )}
             <button
               onClick={handleLogin}
-              className="w-full py-3.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold rounded-xl hover:from-amber-600 hover:to-orange-600 focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-all shadow-lg shadow-amber-500/20"
+              disabled={!selectedPhone || !password || isVerifyingLocation}
+              className={`glass-button-primary w-full flex items-center justify-center gap-2 ${
+                (!selectedPhone || !password || isVerifyingLocation) ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
             >
-              Login
+              {isVerifyingLocation ? (
+                <>
+                  <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Verifying Location...
+                </>
+              ) : (
+                <>
+                  Login
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  </svg>
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -1249,13 +1860,13 @@ function Header({ user, onLogout }) {
   const badge = getRoleBadge(user.role);
 
   return (
-    <header className="bg-stone-900/80 backdrop-blur-xl border-b border-stone-800/50 sticky top-0 z-50">
+    <header className="glass-header-dark sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/20">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-12 h-12 rounded-2xl glass-card-dark flex items-center justify-center shadow-lg shadow-amber-500/10 animate-pulse-glow">
+                <svg className="w-6 h-6 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
                 </svg>
               </div>
@@ -1266,16 +1877,16 @@ function Header({ user, onLogout }) {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <span className={`px-3 py-1.5 text-xs font-medium rounded-lg border ${badge.color}`}>
+            <span className={`glass-badge ${badge.color}`}>
               {badge.label}
             </span>
             <div className="hidden sm:block text-right">
-              <p className="text-sm text-white">{user.name}</p>
+              <p className="text-sm text-white font-medium">{user.name}</p>
               <p className="text-xs text-stone-500">+91 {user.phone}</p>
             </div>
             <button
               onClick={onLogout}
-              className="p-2 text-stone-400 hover:text-white hover:bg-stone-800 rounded-lg transition-all"
+              className="p-2.5 glass-card-dark text-stone-400 hover:text-amber-400 rounded-xl transition-all hover:scale-105"
               title="Logout"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1812,7 +2423,7 @@ function OutletDashboard({ user, items, categories, orders, onAddOrder, onUpdate
           <div className="flex-1">
             {orderStep === 'categories' ? (
               /* CATEGORY SELECTION */
-              <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-6">
+              <div className="glass-card-dark p-6">
                 <div className="flex items-center gap-3 mb-2">
                   <span className="text-2xl">📦</span>
                   <h2 className="text-lg font-semibold text-white">Select Category</h2>
@@ -1849,7 +2460,7 @@ function OutletDashboard({ user, items, categories, orders, onAddOrder, onUpdate
               </div>
             ) : (
               /* ITEM SELECTION */
-              <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-6">
+              <div className="glass-card-dark p-6">
                 <div className="flex items-center gap-3 mb-2">
                   <span className="text-2xl">🛒</span>
                   <h2 className="text-lg font-semibold text-white">{getCategoryName(selectedCategoryId)}</h2>
@@ -1910,7 +2521,7 @@ function OutletDashboard({ user, items, categories, orders, onAddOrder, onUpdate
 
           {/* Cart Sidebar */}
           <div className="w-full lg:w-80">
-            <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-4 sticky top-4">
+            <div className="glass-card-dark p-4 sticky top-4">
               <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
                 🛒 Order Cart
                 {cart.length > 0 && (
@@ -1989,7 +2600,7 @@ function OutletDashboard({ user, items, categories, orders, onAddOrder, onUpdate
       />
 
       {/* Tab Navigation */}
-      <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-2 flex gap-1 overflow-x-auto">
+      <div className="glass-card-dark p-2 flex gap-1 overflow-x-auto">
         {tabs.map(tab => (
           <button
             key={tab.id}
@@ -2243,7 +2854,7 @@ function OutletDashboard({ user, items, categories, orders, onAddOrder, onUpdate
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Today's Summary */}
-            <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-6">
+            <div className="glass-card-dark p-6">
               <h3 className="text-lg font-semibold text-amber-400 mb-2 flex items-center gap-2">
                 <span>💰</span> Today's Summary
               </h3>
@@ -2274,7 +2885,7 @@ function OutletDashboard({ user, items, categories, orders, onAddOrder, onUpdate
             </div>
 
             {/* Low Stock Alerts */}
-            <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-6">
+            <div className="glass-card-dark p-6">
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <h3 className="text-lg font-semibold text-orange-400 flex items-center gap-2">
@@ -2307,7 +2918,7 @@ function OutletDashboard({ user, items, categories, orders, onAddOrder, onUpdate
           </div>
 
           {/* Quick Actions */}
-          <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-6">
+          <div className="glass-card-dark p-6">
             <h3 className="text-lg font-semibold text-emerald-400 mb-2">Quick Actions</h3>
             <p className="text-sm text-stone-500 mb-4">Create new orders and track existing ones</p>
             
@@ -2337,7 +2948,7 @@ function OutletDashboard({ user, items, categories, orders, onAddOrder, onUpdate
 
       {/* STOCK TAB */}
       {activeTab === 'stock' && (
-        <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl overflow-hidden">
+        <div className="glass-card-dark overflow-hidden">
           <div className="p-4 bg-stone-800/30 border-b border-stone-800/50">
             <h3 className="text-lg font-semibold text-white">Current Stock Levels</h3>
           </div>
@@ -2421,7 +3032,7 @@ function OutletDashboard({ user, items, categories, orders, onAddOrder, onUpdate
 
                 {alreadySubmitted && todayEntry ? (
                   /* Show submitted data */
-                  <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl overflow-hidden">
+                  <div className="glass-card-dark overflow-hidden">
                     <div className="p-4 bg-stone-800/30 border-b border-stone-800/50">
                       <h3 className="text-lg font-semibold text-white">Submitted Stock Out - {effectiveDate}</h3>
                       <p className="text-xs text-stone-500">Submitted by {todayEntry.submittedBy} at {formatDate(todayEntry.submittedAt)}</p>
@@ -2451,7 +3062,7 @@ function OutletDashboard({ user, items, categories, orders, onAddOrder, onUpdate
                   </div>
                 ) : (
                   /* Stock Out Entry Form */
-                  <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl overflow-hidden">
+                  <div className="glass-card-dark overflow-hidden">
                     <div className="p-4 bg-stone-800/30 border-b border-stone-800/50">
                       <h3 className="text-lg font-semibold text-white">Enter Remaining Stock</h3>
                       <p className="text-sm text-stone-400">Enter the quantity remaining for each item at end of day</p>
@@ -2518,7 +3129,7 @@ function OutletDashboard({ user, items, categories, orders, onAddOrder, onUpdate
                 )}
 
                 {/* Stock Out History */}
-                <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl overflow-hidden">
+                <div className="glass-card-dark overflow-hidden">
                   <div className="p-4 bg-stone-800/30 border-b border-stone-800/50">
                     <h3 className="text-lg font-semibold text-white">Stock Out History</h3>
                   </div>
@@ -2554,7 +3165,7 @@ function OutletDashboard({ user, items, categories, orders, onAddOrder, onUpdate
       {activeTab === 'stockHistory' && (
         <div className="space-y-6">
           {/* Month Filter */}
-          <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-4">
+          <div className="glass-card-dark p-4">
             <div className="flex flex-wrap items-center gap-4">
               <span className="text-white font-medium">Filter by Month:</span>
               <div className="flex gap-2 flex-wrap">
@@ -2581,7 +3192,7 @@ function OutletDashboard({ user, items, categories, orders, onAddOrder, onUpdate
           </div>
 
           {/* Stock Movement Graph */}
-          <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-6">
+          <div className="glass-card-dark p-6">
             <h3 className="text-lg font-semibold text-amber-400 mb-2 flex items-center gap-2">
               <span>📈</span> Stock Movement Chart
             </h3>
@@ -2768,7 +3379,7 @@ function OutletDashboard({ user, items, categories, orders, onAddOrder, onUpdate
           </div>
 
           {/* Transaction History Table */}
-          <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl overflow-hidden">
+          <div className="glass-card-dark overflow-hidden">
             <div className="p-4 bg-stone-800/30 border-b border-stone-800/50">
               <h3 className="text-lg font-semibold text-white">Transaction History</h3>
               <p className="text-sm text-stone-500">
@@ -2838,7 +3449,7 @@ function OutletDashboard({ user, items, categories, orders, onAddOrder, onUpdate
             <h3 className="text-lg font-semibold text-white">Purchase History</h3>
             <button
               onClick={() => setShowOrderPage(true)}
-              className="px-4 py-2 bg-emerald-500 text-white rounded-xl font-medium hover:bg-emerald-600 transition-colors flex items-center gap-2"
+              className="px-4 py-2 glass-button-primary glass-button-success transition-colors flex items-center gap-2"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -2858,7 +3469,7 @@ function OutletDashboard({ user, items, categories, orders, onAddOrder, onUpdate
                 value={invoiceSearchQuery}
                 onChange={(e) => setInvoiceSearchQuery(e.target.value)}
                 placeholder="Search by Order ID..."
-                className="flex-1 px-3 py-2 bg-stone-800 border border-stone-700 rounded-lg text-white placeholder-stone-500 text-sm"
+                className="flex-1 glass-input-dark placeholder-stone-500 text-sm"
               />
               <button
                 onClick={() => {
@@ -2911,7 +3522,7 @@ function OutletDashboard({ user, items, categories, orders, onAddOrder, onUpdate
       {/* MONTHLY TAB */}
       {activeTab === 'monthly' && (
         <div className="space-y-6">
-          <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-6">
+          <div className="glass-card-dark p-6">
             <h3 className="text-lg font-semibold text-amber-400 mb-2 flex items-center gap-2">
               <span>📅</span> Monthly Report - {today.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
             </h3>
@@ -3538,7 +4149,7 @@ If you cannot extract prices or the PDF is not a price list, return: []`
   return (
     <div className="space-y-6">
       {/* Tab Navigation */}
-      <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-2 flex gap-1 overflow-x-auto">
+      <div className="glass-card-dark p-2 flex gap-1 overflow-x-auto">
         {tabs.map(tab => (
           <button
             key={tab.id}
@@ -3561,7 +4172,7 @@ If you cannot extract prices or the PDF is not a price list, return: []`
       </div>
 
       {/* Global Item Search */}
-      <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-4">
+      <div className="glass-card-dark p-4">
         <div className="flex items-center gap-3">
           <svg className="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -3779,7 +4390,7 @@ If you cannot extract prices or the PDF is not a price list, return: []`
           )}
 
           {/* Today's Summary */}
-          <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-6">
+          <div className="glass-card-dark p-6">
             <h3 className="text-lg font-semibold text-amber-400 mb-2 flex items-center gap-2">
               <span>📊</span> Today's Summary
             </h3>
@@ -3940,7 +4551,7 @@ If you cannot extract prices or the PDF is not a price list, return: []`
           </div>
 
           {/* Cumulative Pending Orders for Vendor */}
-          <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-6">
+          <div className="glass-card-dark p-6">
             <h3 className="text-lg font-semibold text-amber-400 mb-2 flex items-center gap-2">
               <span>🛒</span> Cumulative Pending Orders
             </h3>
@@ -4136,7 +4747,7 @@ If you cannot extract prices or the PDF is not a price list, return: []`
       {/* PURCHASE HISTORY TAB */}
       {activeTab === 'history' && (
         <div className="space-y-4">
-          <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-4">
+          <div className="glass-card-dark p-4">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <h3 className="text-lg font-semibold text-white">Purchase History</h3>
               <div className="flex gap-2">
@@ -4187,7 +4798,7 @@ If you cannot extract prices or the PDF is not a price list, return: []`
       {activeTab === 'analytics' && (
         <div className="space-y-6">
           {/* Top Ordered Items */}
-          <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-6">
+          <div className="glass-card-dark p-6">
             <h3 className="text-lg font-semibold text-amber-400 mb-4 flex items-center gap-2">
               <span>🏆</span> Top Ordered Items (This Month)
             </h3>
@@ -4242,7 +4853,7 @@ If you cannot extract prices or the PDF is not a price list, return: []`
           </div>
 
           {/* Category Analysis */}
-          <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-6">
+          <div className="glass-card-dark p-6">
             <h3 className="text-lg font-semibold text-amber-400 mb-4 flex items-center gap-2">
               <span>📦</span> Category Breakdown (This Month)
             </h3>
@@ -4287,7 +4898,7 @@ If you cannot extract prices or the PDF is not a price list, return: []`
           </div>
 
           {/* Outlet Comparison */}
-          <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-6">
+          <div className="glass-card-dark p-6">
             <h3 className="text-lg font-semibold text-amber-400 mb-4 flex items-center gap-2">
               <span>🏪</span> Outlet Comparison (This Month)
             </h3>
@@ -4333,7 +4944,7 @@ If you cannot extract prices or the PDF is not a price list, return: []`
       {activeTab === 'manage' && (
         <div className="space-y-6">
           {/* Categories Section */}
-          <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-6">
+          <div className="glass-card-dark p-6">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-lg font-semibold text-amber-400 flex items-center gap-2">
@@ -4583,7 +5194,7 @@ If you cannot extract prices or the PDF is not a price list, return: []`
           </div>
 
           {/* Items Section */}
-          <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-6">
+          <div className="glass-card-dark p-6">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-lg font-semibold text-emerald-400 flex items-center gap-2">
@@ -4742,7 +5353,7 @@ If you cannot extract prices or the PDF is not a price list, return: []`
 
           {/* PDF Extractor Modal */}
           {showPdfExtractor && (
-            <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+            <div className="fixed inset-0 glass-modal-overlay flex items-center justify-center z-50 p-4">
               <div className="bg-stone-900 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden animate-modal-in">
                 <div className="p-6 border-b border-stone-800">
                   <div className="flex items-center justify-between">
@@ -4978,7 +5589,7 @@ If you cannot extract prices or the PDF is not a price list, return: []`
           )}
 
           {/* Category Filter */}
-          <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-4">
+          <div className="glass-card-dark p-4">
             <div className="flex flex-wrap items-center gap-3">
               <span className="text-sm text-stone-400">Filter by Category:</span>
               <button
@@ -5007,7 +5618,7 @@ If you cannot extract prices or the PDF is not a price list, return: []`
             </div>
           </div>
 
-          <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl overflow-hidden">
+          <div className="glass-card-dark overflow-hidden">
           <div className="p-4 bg-stone-800/30 border-b border-stone-800/50">
             <h3 className="text-lg font-semibold text-white">Price Management</h3>
             <p className="text-sm text-stone-400">Update item prices - changes apply to new orders automatically</p>
@@ -5092,7 +5703,7 @@ If you cannot extract prices or the PDF is not a price list, return: []`
       {/* BUDGET TAB */}
       {activeTab === 'budget' && (
         <div className="space-y-6">
-          <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-6">
+          <div className="glass-card-dark p-6">
             <h3 className="text-lg font-semibold text-amber-400 mb-2 flex items-center gap-2">
               <span>🎯</span> Monthly Purchase Budget
             </h3>
@@ -5151,7 +5762,7 @@ If you cannot extract prices or the PDF is not a price list, return: []`
           </div>
 
           {/* Total Budget Overview */}
-          <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-6">
+          <div className="glass-card-dark p-6">
             <h3 className="text-lg font-semibold text-white mb-4">Total Budget Overview</h3>
             {(() => {
               const totalBudget = outlets.reduce((s, o) => s + getBudget(o), 0);
@@ -5185,7 +5796,7 @@ If you cannot extract prices or the PDF is not a price list, return: []`
       {activeTab === 'monthly' && (
         <div className="space-y-6">
           {/* Monthly Summary */}
-          <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-6">
+          <div className="glass-card-dark p-6">
             <h3 className="text-lg font-semibold text-amber-400 mb-2 flex items-center gap-2">
               <span>📅</span> Monthly Report - {today.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
             </h3>
@@ -5253,7 +5864,7 @@ If you cannot extract prices or the PDF is not a price list, return: []`
           </div>
 
           {/* Daily Breakdown */}
-          <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-6">
+          <div className="glass-card-dark p-6">
             <h3 className="text-lg font-semibold text-white mb-4">Daily Order Breakdown</h3>
             {(() => {
               const dailyData = {};
@@ -5310,7 +5921,7 @@ If you cannot extract prices or the PDF is not a price list, return: []`
           </div>
 
           {/* Invoice Search Section */}
-          <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-6">
+          <div className="glass-card-dark p-6">
             <h3 className="text-lg font-semibold text-amber-400 mb-4 flex items-center gap-2">
               <span>🔍</span> Invoice Search
             </h3>
@@ -5387,7 +5998,7 @@ If you cannot extract prices or the PDF is not a price list, return: []`
           </div>
 
           {/* Stock Difference Report */}
-          <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-6">
+          <div className="glass-card-dark p-6">
             <h3 className="text-lg font-semibold text-cyan-400 mb-4 flex items-center gap-2">
               <span>⚖️</span> Stock Difference Report
               <span className="text-xs text-stone-500 font-normal">(Ordered vs Consumed)</span>
@@ -5400,7 +6011,7 @@ If you cannot extract prices or the PDF is not a price list, return: []`
                 <select
                   value={stockDiffPeriod}
                   onChange={(e) => setStockDiffPeriod(e.target.value)}
-                  className="px-3 py-2 bg-stone-800 border border-stone-700 rounded-lg text-white text-sm"
+                  className="glass-input-dark text-sm"
                 >
                   <option value="today">Today</option>
                   <option value="yesterday">Yesterday</option>
@@ -5415,7 +6026,7 @@ If you cannot extract prices or the PDF is not a price list, return: []`
                 <select
                   value={stockDiffOutlet}
                   onChange={(e) => setStockDiffOutlet(e.target.value)}
-                  className="px-3 py-2 bg-stone-800 border border-stone-700 rounded-lg text-white text-sm"
+                  className="glass-input-dark text-sm"
                 >
                   <option value="All">All Outlets</option>
                   {outlets.map(o => <option key={o} value={o}>{o}</option>)}
@@ -5428,7 +6039,7 @@ If you cannot extract prices or the PDF is not a price list, return: []`
                   value={stockDiffItemFilter}
                   onChange={(e) => setStockDiffItemFilter(e.target.value)}
                   placeholder="Filter by item name..."
-                  className="px-3 py-2 bg-stone-800 border border-stone-700 rounded-lg text-white text-sm w-40"
+                  className="glass-input-dark text-sm w-40"
                 />
               </div>
             </div>
@@ -5621,7 +6232,7 @@ If you cannot extract prices or the PDF is not a price list, return: []`
           </div>
 
           {/* Over-Ordering Analysis */}
-          <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-6">
+          <div className="glass-card-dark p-6">
             <h3 className="text-lg font-semibold text-orange-400 mb-2 flex items-center gap-2">
               <span>⚠️</span> Over-Ordering Detection
               {totalOverOrderingAlerts > 0 && (
@@ -5672,7 +6283,7 @@ If you cannot extract prices or the PDF is not a price list, return: []`
           </div>
 
           {/* Vendor Price Comparison */}
-          <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-6">
+          <div className="glass-card-dark p-6">
             <h3 className="text-lg font-semibold text-purple-400 mb-2 flex items-center gap-2">
               <span>💰</span> Vendor Price Comparison
               {vendorPriceAlerts.length > 0 && (
@@ -5918,7 +6529,7 @@ function AdminDashboard({ data, onUpdateItems, onUpdateRevenueData }) {
   return (
     <div className="space-y-6">
       {/* Global Item Search */}
-      <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-4">
+      <div className="glass-card-dark p-4">
         <div className="flex items-center gap-3">
           <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -6133,7 +6744,7 @@ function AdminDashboard({ data, onUpdateItems, onUpdateRevenueData }) {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Outlet Performance */}
-          <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-6">
+          <div className="glass-card-dark p-6">
             <h3 className="text-lg font-semibold text-white mb-4">Outlet Performance</h3>
             <div className="space-y-4">
               {outletStats.map(outlet => (
@@ -6164,7 +6775,7 @@ function AdminDashboard({ data, onUpdateItems, onUpdateRevenueData }) {
           </div>
 
           {/* Category Breakdown */}
-          <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-6">
+          <div className="glass-card-dark p-6">
             <h3 className="text-lg font-semibold text-white mb-4">Category Breakdown</h3>
             <div className="space-y-3">
               {Object.entries(categoryBreakdown).sort((a, b) => b[1].cost - a[1].cost).map(([category, data]) => (
@@ -6201,7 +6812,7 @@ function AdminDashboard({ data, onUpdateItems, onUpdateRevenueData }) {
       {activeTab === 'revenue' && (
         <div className="space-y-6">
           {/* Month Selector */}
-          <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-4">
+          <div className="glass-card-dark p-4">
             <div className="flex flex-wrap items-center gap-4">
               <span className="text-white font-medium">Select Month:</span>
               <div className="flex gap-2 flex-wrap">
@@ -6223,7 +6834,7 @@ function AdminDashboard({ data, onUpdateItems, onUpdateRevenueData }) {
           </div>
 
           {/* Revenue & Budget Management */}
-          <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-6">
+          <div className="glass-card-dark p-6">
             <h3 className="text-lg font-semibold text-amber-400 mb-2 flex items-center gap-2">
               <span>💰</span> Revenue & Budget Management - {months.find(m => m.value === selectedMonth)?.label}
             </h3>
@@ -6331,7 +6942,7 @@ function AdminDashboard({ data, onUpdateItems, onUpdateRevenueData }) {
           </div>
 
           {/* Annual Overview */}
-          <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-6">
+          <div className="glass-card-dark p-6">
             <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
               <span>📊</span> Annual Revenue & Budget Overview
             </h3>
@@ -6390,7 +7001,7 @@ function AdminDashboard({ data, onUpdateItems, onUpdateRevenueData }) {
       {/* SPEND TRACKER TAB */}
       {activeTab === 'spendTracker' && (
         <div className="space-y-6">
-          <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-6">
+          <div className="glass-card-dark p-6">
             <h3 className="text-lg font-semibold text-white mb-2 flex items-center gap-2">
               <span>💰</span> Outlet-Wise Spend Tracker
             </h3>
@@ -6529,7 +7140,7 @@ function AdminDashboard({ data, onUpdateItems, onUpdateRevenueData }) {
       {/* MONTHLY SPENDING TAB */}
       {activeTab === 'monthlySpending' && (
         <div className="space-y-6">
-          <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-6">
+          <div className="glass-card-dark p-6">
             <h3 className="text-lg font-semibold text-white mb-2 flex items-center gap-2">
               <span>📅</span> Monthly Spending Analysis
             </h3>
@@ -6542,7 +7153,7 @@ function AdminDashboard({ data, onUpdateItems, onUpdateRevenueData }) {
                 <select
                   value={selectedOutlet || 'all'}
                   onChange={(e) => setSelectedOutlet(e.target.value === 'all' ? null : e.target.value)}
-                  className="px-4 py-2 bg-stone-800 border border-stone-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                  className="glass-input-dark focus:outline-none focus:ring-2 focus:ring-amber-500/50"
                 >
                   <option value="all">All Outlets</option>
                   {outlets.map(outlet => (
@@ -6670,7 +7281,7 @@ function AdminDashboard({ data, onUpdateItems, onUpdateRevenueData }) {
           </div>
 
           {/* Visual Chart */}
-          <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-6">
+          <div className="glass-card-dark p-6">
             <h3 className="text-lg font-semibold text-white mb-4">Monthly Spending Trend</h3>
             <div className="space-y-3">
               {months.map(month => {
@@ -6787,7 +7398,7 @@ function AdminDashboard({ data, onUpdateItems, onUpdateRevenueData }) {
                     const isGood = stats.avgDispatch > 0 && stats.avgDispatch <= 30;
                     const isWarning = stats.avgDispatch > 30 && stats.avgDispatch <= 60;
                     return (
-                      <div key={outlet} className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-6">
+                      <div key={outlet} className="glass-card-dark p-6">
                         <div className="flex items-center justify-between mb-4">
                           <h3 className="text-lg font-semibold text-white">{outlet}</h3>
                           <span className={`px-3 py-1 text-xs font-medium rounded-full ${
@@ -6850,7 +7461,7 @@ function AdminDashboard({ data, onUpdateItems, onUpdateRevenueData }) {
                   const stats = outletStats[outlet];
                   if (stats.count === 0) return null;
                   return (
-                    <div key={outlet} className="bg-stone-900/50 border border-stone-800/50 rounded-2xl overflow-hidden">
+                    <div key={outlet} className="glass-card-dark overflow-hidden">
                       <div className="p-4 bg-stone-800/30 border-b border-stone-800/50">
                         <h3 className="text-white font-semibold flex items-center gap-2">
                           <span>🏪</span> {outlet} — Dispatch History
@@ -6918,7 +7529,7 @@ function AdminDashboard({ data, onUpdateItems, onUpdateRevenueData }) {
           </div>
 
           {/* Over-Ordering Analysis */}
-          <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-6">
+          <div className="glass-card-dark p-6">
             <h3 className="text-lg font-semibold text-orange-400 mb-2 flex items-center gap-2">
               <span>⚠️</span> Over-Ordering Detection (All Outlets)
               {totalOverOrderingAlerts > 0 && (
@@ -6969,7 +7580,7 @@ function AdminDashboard({ data, onUpdateItems, onUpdateRevenueData }) {
           </div>
 
           {/* Vendor Price Comparison */}
-          <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-6">
+          <div className="glass-card-dark p-6">
             <h3 className="text-lg font-semibold text-purple-400 mb-2 flex items-center gap-2">
               <span>💰</span> Vendor Price Comparison
               {vendorPriceAlerts.length > 0 && (
@@ -7021,7 +7632,7 @@ function AdminDashboard({ data, onUpdateItems, onUpdateRevenueData }) {
           </div>
 
           {/* Budget Status Summary */}
-          <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-6">
+          <div className="glass-card-dark p-6">
             <h3 className="text-lg font-semibold text-blue-400 mb-4 flex items-center gap-2">
               <span>📊</span> Budget Status Summary
             </h3>
@@ -7095,7 +7706,7 @@ function AdminDashboard({ data, onUpdateItems, onUpdateRevenueData }) {
                 <select
                   value={reportMonth}
                   onChange={(e) => setReportMonth(parseInt(e.target.value))}
-                  className="px-3 py-2 bg-stone-800 border border-stone-700 rounded-lg text-white text-sm"
+                  className="glass-input-dark text-sm"
                 >
                   {[
                     { value: 1, label: 'January' }, { value: 2, label: 'February' }, { value: 3, label: 'March' },
@@ -7109,7 +7720,7 @@ function AdminDashboard({ data, onUpdateItems, onUpdateRevenueData }) {
                 <select
                   value={reportOutlet}
                   onChange={(e) => setReportOutlet(e.target.value)}
-                  className="px-3 py-2 bg-stone-800 border border-stone-700 rounded-lg text-white text-sm"
+                  className="glass-input-dark text-sm"
                 >
                   <option value="All">All Outlets</option>
                   {outlets.map(o => (
@@ -7277,7 +7888,7 @@ function AdminDashboard({ data, onUpdateItems, onUpdateRevenueData }) {
 
           {/* DETAILED REPORT VIEW */}
           {activeReport && (
-            <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl overflow-hidden animate-slide-up">
+            <div className="glass-card-dark overflow-hidden animate-slide-up">
               {/* Stock Consumed Report Detail */}
               {activeReport === 'stockConsumed' && (
                 <>
@@ -8516,7 +9127,7 @@ function AdminDashboard({ data, onUpdateItems, onUpdateRevenueData }) {
       )}
 
       {activeTab === 'users' && (
-        <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl overflow-hidden">
+        <div className="glass-card-dark overflow-hidden">
           <table className="w-full">
             <thead>
               <tr className="text-left text-xs text-stone-400 uppercase tracking-wider bg-stone-800/30">
@@ -8551,7 +9162,7 @@ function AdminDashboard({ data, onUpdateItems, onUpdateRevenueData }) {
       {activeTab === 'items' && (
         <div className="space-y-4">
           {/* Category Filter */}
-          <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-4">
+          <div className="glass-card-dark p-4">
             <div className="flex flex-wrap items-center gap-3">
               <span className="text-sm text-stone-400">Filter by Category:</span>
               <button
@@ -8580,7 +9191,7 @@ function AdminDashboard({ data, onUpdateItems, onUpdateRevenueData }) {
             </div>
           </div>
 
-          <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl overflow-hidden">
+          <div className="glass-card-dark overflow-hidden">
           <table className="w-full">
             <thead>
               <tr className="text-left text-xs text-stone-400 uppercase tracking-wider bg-stone-800/30">
@@ -8615,20 +9226,29 @@ function AdminDashboard({ data, onUpdateItems, onUpdateRevenueData }) {
 // ============================================
 function StatCard({ title, value, icon, color }) {
   const colors = {
-    amber: 'from-amber-500/10 to-orange-500/10 border-amber-500/20',
-    blue: 'from-blue-500/10 to-cyan-500/10 border-blue-500/20',
-    emerald: 'from-emerald-500/10 to-teal-500/10 border-emerald-500/20',
-    purple: 'from-purple-500/10 to-pink-500/10 border-purple-500/20',
+    amber: 'border-amber-500/30',
+    blue: 'border-blue-500/30',
+    emerald: 'border-emerald-500/30',
+    purple: 'border-purple-500/30',
+    red: 'border-red-500/30',
+  };
+  
+  const iconColors = {
+    amber: 'from-amber-500/20 to-orange-500/20',
+    blue: 'from-blue-500/20 to-cyan-500/20',
+    emerald: 'from-emerald-500/20 to-teal-500/20',
+    purple: 'from-purple-500/20 to-pink-500/20',
+    red: 'from-red-500/20 to-rose-500/20',
   };
 
   return (
-    <div className={`bg-gradient-to-br ${colors[color]} border rounded-2xl p-5 card-hover transition-all hover:scale-[1.02]`}>
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-stone-400 text-sm">{title}</p>
-          <p className="text-2xl font-bold text-white mt-1 number-animate">{value}</p>
-        </div>
+    <div className={`glass-stat-card-dark ${colors[color]} animate-scale-in`}>
+      <div className={`glass-icon-dark bg-gradient-to-br ${iconColors[color]}`}>
         <span className="text-2xl">{icon}</span>
+      </div>
+      <div>
+        <p className="text-2xl font-bold text-white">{value}</p>
+        <p className="text-sm text-stone-400">{title}</p>
       </div>
     </div>
   );
@@ -8638,11 +9258,7 @@ function TabButton({ active, onClick, children }) {
   return (
     <button
       onClick={onClick}
-      className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap active:scale-95 ${
-        active
-          ? 'bg-amber-500/20 text-amber-400 scale-[1.02]'
-          : 'text-stone-400 hover:text-white hover:bg-stone-800'
-      }`}
+      className={`glass-tab glass-tab-dark ${active ? 'active' : ''}`}
     >
       {children}
     </button>
@@ -8706,7 +9322,7 @@ function ItemSearchAnalytics({ items, categories, orders, outlets, searchItemId,
   });
 
   return (
-    <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl overflow-hidden">
+    <div className="glass-card-dark overflow-hidden">
       <div className="p-4 bg-stone-800/30 border-b border-stone-800/50">
         <h3 className="text-lg font-semibold text-white flex items-center gap-2">
           <span>🔍</span> Item Purchase Lookup
@@ -8930,7 +9546,7 @@ function OrderHistory({ orders, showOutlet, showActions, onUpdateStatus }) {
 
   if (orders.length === 0) {
     return (
-      <div className="bg-stone-900/50 border border-stone-800/50 rounded-2xl p-12 text-center">
+      <div className="glass-card-dark p-12 text-center">
         <svg className="w-16 h-16 mx-auto mb-4 text-stone-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
@@ -8942,7 +9558,7 @@ function OrderHistory({ orders, showOutlet, showActions, onUpdateStatus }) {
   return (
     <div className="space-y-3">
       {sortedOrders.map(order => (
-        <div key={order.id} className="bg-stone-900/50 border border-stone-800/50 rounded-2xl overflow-hidden">
+        <div key={order.id} className="glass-card-dark overflow-hidden">
           <div 
             className="p-4 cursor-pointer hover:bg-stone-800/20 transition-colors"
             onClick={() => setExpandedOrder(expandedOrder === order.id ? null : order.id)}
