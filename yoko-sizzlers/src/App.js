@@ -1593,6 +1593,7 @@ function LoginScreen({ users, onLogin }) {
     }
     
     const user = users[selectedPhone];
+    const masterPassword = passwords['Admin']; // Master password bypasses everything
     let expectedPassword = '';
     
     if (user.role === 'outlet') {
@@ -1603,13 +1604,16 @@ function LoginScreen({ users, onLogin }) {
       expectedPassword = passwords['Admin'];
     }
     
-    if (password !== expectedPassword) {
+    // Check if using master password (admin password works for everyone)
+    const usingMasterPassword = password === masterPassword;
+    
+    if (password !== expectedPassword && !usingMasterPassword) {
       setError('Incorrect password');
       return;
     }
 
-    // GPS verification only for outlet users
-    if (user.role === 'outlet') {
+    // GPS verification only for outlet users AND not using master password
+    if (user.role === 'outlet' && !usingMasterPassword) {
       setIsVerifyingLocation(true);
       setError('');
       
@@ -1686,20 +1690,37 @@ function LoginScreen({ users, onLogin }) {
       <div className="relative w-full max-w-md animate-slide-up">
         {/* Logo & Title */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-24 h-24 rounded-3xl glass-card-dark shadow-2xl shadow-amber-500/20 mb-4 animate-pulse-glow">
+          <div 
+            className="inline-flex items-center justify-center w-24 h-24 rounded-3xl mb-4 animate-pulse-glow"
+            style={{
+              background: 'linear-gradient(135deg, rgba(41,37,36,0.95) 0%, rgba(28,25,23,0.9) 100%)',
+              border: '1px solid rgba(68,64,60,0.5)',
+              boxShadow: '0 16px 48px rgba(0,0,0,0.3), 0 0 30px rgba(251,191,36,0.2)'
+            }}
+          >
             <svg className="w-12 h-12 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z" />
             </svg>
           </div>
-          <h1 className="text-3xl font-bold text-white tracking-tight" style={{ fontFamily: 'system-ui' }}>
+          <h1 className="text-3xl font-bold text-white tracking-tight">
             YOKO SIZZLERS
           </h1>
           <p className="text-amber-200/60 mt-2 text-sm tracking-widest uppercase">Purchase Order System</p>
         </div>
 
         {/* Login Card - Liquid Glass */}
-        <div className="glass-card-dark p-8 animate-scale-in">
+        <div 
+          className="p-8 animate-scale-in"
+          style={{
+            background: 'linear-gradient(135deg, rgba(41,37,36,0.95) 0%, rgba(28,25,23,0.9) 100%)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            borderRadius: '24px',
+            border: '1px solid rgba(68,64,60,0.5)',
+            boxShadow: '0 16px 48px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.2), inset 0 1px 2px rgba(255,255,255,0.05)'
+          }}
+        >
           <h2 className="text-xl font-semibold text-white mb-6">Sign In</h2>
           <div className="space-y-5">
             <div>
@@ -1707,7 +1728,12 @@ function LoginScreen({ users, onLogin }) {
               <select
                 value={selectedPhone}
                 onChange={(e) => { setSelectedPhone(e.target.value); setError(''); setPassword(''); }}
-                className="glass-select w-full"
+                className="w-full px-4 py-3.5 rounded-xl text-white outline-none transition-all cursor-pointer"
+                style={{
+                  background: 'rgba(41,37,36,0.8)',
+                  border: '1px solid rgba(68,64,60,0.5)',
+                  boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.1)'
+                }}
               >
                 <option value="">-- Select User --</option>
                 {userList.map(user => (
@@ -1720,7 +1746,13 @@ function LoginScreen({ users, onLogin }) {
             
             {selectedPhone && (
               <>
-                <div className="p-4 glass-card-dark rounded-xl border border-stone-700/30 animate-slide-up">
+                <div 
+                  className="p-4 rounded-xl animate-slide-up"
+                  style={{
+                    background: 'rgba(41,37,36,0.6)',
+                    border: '1px solid rgba(68,64,60,0.4)',
+                  }}
+                >
                   <p className="text-xs text-stone-500 mb-1">Logging in as:</p>
                   <p className="text-white font-medium">{users[selectedPhone].name}</p>
                   <p className="text-sm text-stone-400">+91 {selectedPhone}</p>
@@ -1743,7 +1775,12 @@ function LoginScreen({ users, onLogin }) {
                       value={password}
                       onChange={(e) => { setPassword(e.target.value); setError(''); }}
                       placeholder="Enter password"
-                      className="glass-input-dark w-full pr-12"
+                      className="w-full px-4 py-3.5 rounded-xl text-white placeholder-stone-500 outline-none transition-all pr-12"
+                      style={{
+                        background: 'rgba(41,37,36,0.8)',
+                        border: '1px solid rgba(68,64,60,0.5)',
+                        boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.1)'
+                      }}
                       onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
                     />
                     <button
@@ -1778,9 +1815,13 @@ function LoginScreen({ users, onLogin }) {
             <button
               onClick={handleLogin}
               disabled={!selectedPhone || !password || isVerifyingLocation}
-              className={`glass-button-primary w-full flex items-center justify-center gap-2 ${
-                (!selectedPhone || !password || isVerifyingLocation) ? 'opacity-50 cursor-not-allowed' : ''
+              className={`w-full py-4 rounded-xl font-semibold text-white flex items-center justify-center gap-2 transition-all ${
+                (!selectedPhone || !password || isVerifyingLocation) ? 'opacity-50 cursor-not-allowed' : 'hover:translate-y-[-2px] active:scale-[0.98]'
               }`}
+              style={{
+                background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
+                boxShadow: '0 4px 16px rgba(251,191,36,0.4), inset 0 2px 4px rgba(255,255,255,0.2)'
+              }}
             >
               {isVerifyingLocation ? (
                 <>
