@@ -549,9 +549,9 @@ function GlobalStyles() {
       }
       
       .glass-modal-overlay {
-        background: rgba(0,0,0,0.6);
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
+        background: rgba(15,10,25,0.8);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
       }
       
       .glass-scrollbar::-webkit-scrollbar {
@@ -559,15 +559,137 @@ function GlobalStyles() {
         height: 8px;
       }
       .glass-scrollbar::-webkit-scrollbar-track {
-        background: rgba(68,64,60,0.2);
+        background: rgba(139,92,246,0.1);
         border-radius: 4px;
       }
       .glass-scrollbar::-webkit-scrollbar-thumb {
-        background: rgba(120,113,108,0.5);
+        background: rgba(139,92,246,0.4);
         border-radius: 4px;
       }
       .glass-scrollbar::-webkit-scrollbar-thumb:hover {
-        background: rgba(120,113,108,0.7);
+        background: rgba(139,92,246,0.6);
+      }
+      
+      /* Purple Glassmorphism Dashboard Theme */
+      .dashboard-bg {
+        background: linear-gradient(135deg, #0f0a19 0%, #1a1025 25%, #1e1230 50%, #150d20 75%, #0d0815 100%);
+        min-height: 100vh;
+      }
+      
+      .glass-card-purple {
+        background: linear-gradient(135deg, rgba(30,20,45,0.8) 0%, rgba(25,15,40,0.6) 100%);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-radius: 20px;
+        border: 1px solid rgba(139,92,246,0.2);
+        box-shadow: 
+          0 8px 32px rgba(0,0,0,0.4),
+          inset 0 1px 1px rgba(255,255,255,0.05);
+        transition: all 0.3s ease;
+      }
+      .glass-card-purple:hover {
+        border-color: rgba(139,92,246,0.4);
+        box-shadow: 
+          0 12px 40px rgba(139,92,246,0.15),
+          0 8px 32px rgba(0,0,0,0.4),
+          inset 0 1px 1px rgba(255,255,255,0.08);
+      }
+      
+      .glass-card-gradient {
+        background: linear-gradient(135deg, rgba(139,92,246,0.3) 0%, rgba(236,72,153,0.2) 50%, rgba(34,211,238,0.2) 100%);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-radius: 20px;
+        border: 1px solid rgba(255,255,255,0.15);
+        box-shadow: 0 8px 32px rgba(139,92,246,0.2);
+      }
+      
+      .glass-input-purple {
+        padding: 14px 18px;
+        background: rgba(30,20,45,0.6);
+        border: 1px solid rgba(139,92,246,0.3);
+        border-radius: 12px;
+        color: #f5f3ff;
+        font-size: 15px;
+        outline: none;
+        transition: all 0.3s ease;
+      }
+      .glass-input-purple:focus {
+        background: rgba(30,20,45,0.8);
+        border-color: rgba(139,92,246,0.6);
+        box-shadow: 0 0 0 4px rgba(139,92,246,0.15);
+      }
+      .glass-input-purple::placeholder {
+        color: rgba(167,139,250,0.5);
+      }
+      
+      .glass-button-purple {
+        padding: 12px 24px;
+        background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%);
+        border: none;
+        border-radius: 12px;
+        color: white;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 20px rgba(139,92,246,0.4);
+      }
+      .glass-button-purple:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 30px rgba(139,92,246,0.5);
+      }
+      
+      .glass-button-gradient {
+        padding: 12px 24px;
+        background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 50%, #22d3ee 100%);
+        background-size: 200% 200%;
+        border: none;
+        border-radius: 12px;
+        color: white;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 20px rgba(139,92,246,0.4);
+      }
+      .glass-button-gradient:hover {
+        background-position: 100% 100%;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 30px rgba(236,72,153,0.4);
+      }
+      
+      .gradient-text {
+        background: linear-gradient(135deg, #a78bfa 0%, #f472b6 50%, #22d3ee 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+      
+      .gradient-border {
+        position: relative;
+        background: linear-gradient(135deg, rgba(30,20,45,0.9) 0%, rgba(25,15,40,0.8) 100%);
+        border-radius: 20px;
+      }
+      .gradient-border::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: 20px;
+        padding: 1px;
+        background: linear-gradient(135deg, rgba(139,92,246,0.5) 0%, rgba(236,72,153,0.3) 50%, rgba(34,211,238,0.3) 100%);
+        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
+        pointer-events: none;
+      }
+      
+      .glow-purple {
+        box-shadow: 0 0 30px rgba(139,92,246,0.3);
+      }
+      .glow-pink {
+        box-shadow: 0 0 30px rgba(236,72,153,0.3);
+      }
+      .glow-cyan {
+        box-shadow: 0 0 30px rgba(34,211,238,0.3);
       }
       
       /* Stagger children animation */
@@ -587,6 +709,22 @@ function GlobalStyles() {
     `}</style>
   );
 }
+
+// Utility function to get accent colors for each user type
+const getAccentColor = (user) => {
+  if (!user) return { primary: '#8b5cf6', glow: 'rgba(139,92,246,0.4)', gradient: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)', rgb: '139,92,246' };
+  if (user.role === 'outlet') {
+    switch (user.outlet) {
+      case 'Santacruz': return { primary: '#f59e0b', glow: 'rgba(245,158,11,0.4)', gradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', rgb: '245,158,11' }; // Gold
+      case 'Bandra': return { primary: '#10b981', glow: 'rgba(16,185,129,0.4)', gradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', rgb: '16,185,129' }; // Green
+      case 'Oshiwara': return { primary: '#8b5cf6', glow: 'rgba(139,92,246,0.4)', gradient: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)', rgb: '139,92,246' }; // Purple
+      default: return { primary: '#8b5cf6', glow: 'rgba(139,92,246,0.4)', gradient: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)', rgb: '139,92,246' };
+    }
+  }
+  if (user.role === 'central_kitchen') return { primary: '#eab308', glow: 'rgba(234,179,8,0.4)', gradient: 'linear-gradient(135deg, #eab308 0%, #ca8a04 100%)', rgb: '234,179,8' }; // Yellow
+  if (user.role === 'admin') return { primary: '#3b82f6', glow: 'rgba(59,130,246,0.4)', gradient: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', rgb: '59,130,246' }; // Blue
+  return { primary: '#8b5cf6', glow: 'rgba(139,92,246,0.4)', gradient: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)', rgb: '139,92,246' };
+};
 
 // Animation Hook for counting numbers
 const useCountAnimation = (target, duration = 1000) => {
@@ -1495,16 +1633,20 @@ export default function YokoSizzlersApp() {
     orderCounters,
   };
 
+  const accent = getAccentColor(currentUser);
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-stone-950 via-stone-900 to-stone-950 relative overflow-hidden">
-      {/* Animated background blobs */}
+    <div className="min-h-screen relative overflow-hidden" style={{
+      background: 'linear-gradient(135deg, #0f0a19 0%, #1a1025 25%, #1e1230 50%, #150d20 75%, #0d0815 100%)'
+    }}>
+      {/* Animated background blobs - colored based on user */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-10 w-96 h-96 bg-amber-500/5 rounded-full blur-3xl animate-blob"></div>
-        <div className="absolute bottom-40 right-20 w-80 h-80 bg-orange-500/5 rounded-full blur-3xl animate-blob animation-delay-2000"></div>
-        <div className="absolute top-1/2 left-1/3 w-72 h-72 bg-amber-600/3 rounded-full blur-3xl animate-blob animation-delay-4000"></div>
+        <div className="absolute top-20 left-10 w-96 h-96 rounded-full blur-3xl animate-blob" style={{ background: `rgba(${accent.rgb},0.15)` }}></div>
+        <div className="absolute bottom-40 right-20 w-80 h-80 rounded-full blur-3xl animate-blob animation-delay-2000" style={{ background: `rgba(${accent.rgb},0.1)` }}></div>
+        <div className="absolute top-1/2 left-1/3 w-72 h-72 rounded-full blur-3xl animate-blob animation-delay-4000" style={{ background: `rgba(${accent.rgb},0.08)` }}></div>
       </div>
       <GlobalStyles />
-      <Header user={currentUser} onLogout={handleLogout} />
+      <Header user={currentUser} onLogout={handleLogout} accent={accent} />
       <main className="relative max-w-7xl mx-auto px-4 py-6">
         {currentUser.role === 'outlet' && (
           <OutletDashboard 
@@ -1516,6 +1658,7 @@ export default function YokoSizzlersApp() {
             onUpdateOrderStatus={updateOrderStatus}
             onUpdateStockOut={updateStockOutHistoryFn}
             globalStockOutHistory={stockOutHistory}
+            accent={accent}
           />
         )}
         {currentUser.role === 'central_kitchen' && (
@@ -1530,6 +1673,7 @@ export default function YokoSizzlersApp() {
             onUpdateOrderStatus={updateOrderStatus}
             onUpdateOrder={updateOrder}
             globalStockOutHistory={stockOutHistory}
+            accent={accent}
           />
         )}
         {currentUser.role === 'admin' && (
@@ -1537,6 +1681,7 @@ export default function YokoSizzlersApp() {
             data={{ ...data, stockOutHistory }}
             onUpdateItems={updateItems}
             onUpdateRevenueData={updateRevenueDataFn}
+            accent={accent}
           />
         )}
       </main>
@@ -1545,7 +1690,7 @@ export default function YokoSizzlersApp() {
 }
 
 // ============================================
-// LOGIN SCREEN - Direct Selection (No OTP)
+// LOGIN SCREEN - Ribbon Style Design
 // ============================================
 function LoginScreen({ users, onLogin }) {
   const [selectedPhone, setSelectedPhone] = useState('');
@@ -1570,20 +1715,44 @@ function LoginScreen({ users, onLogin }) {
     'Admin': 'ysp2025#YOKO',
   };
 
+  // Accent colors for each user type
+  const getAccentColor = (user) => {
+    if (!user) return { primary: '#8b5cf6', glow: 'rgba(139,92,246,0.4)', gradient: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)' };
+    if (user.role === 'outlet') {
+      switch (user.outlet) {
+        case 'Santacruz': return { primary: '#f59e0b', glow: 'rgba(245,158,11,0.4)', gradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' }; // Gold
+        case 'Bandra': return { primary: '#10b981', glow: 'rgba(16,185,129,0.4)', gradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }; // Green
+        case 'Oshiwara': return { primary: '#8b5cf6', glow: 'rgba(139,92,246,0.4)', gradient: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)' }; // Purple
+        default: return { primary: '#8b5cf6', glow: 'rgba(139,92,246,0.4)', gradient: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)' };
+      }
+    }
+    if (user.role === 'central_kitchen') return { primary: '#eab308', glow: 'rgba(234,179,8,0.4)', gradient: 'linear-gradient(135deg, #eab308 0%, #ca8a04 100%)' }; // Yellow
+    if (user.role === 'admin') return { primary: '#3b82f6', glow: 'rgba(59,130,246,0.4)', gradient: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' }; // Blue
+    return { primary: '#8b5cf6', glow: 'rgba(139,92,246,0.4)', gradient: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)' };
+  };
+
+  const userList = Object.entries(users).map(([phone, data]) => ({
+    phone,
+    ...data,
+    displayName: data.role === 'outlet' ? `${data.outlet} Outlet` : 
+                 data.role === 'central_kitchen' ? 'Central Kitchen' : 'Admin'
+  }));
+
+  const selectedUser = selectedPhone ? users[selectedPhone] : null;
+  const accent = getAccentColor(selectedUser);
+
   // Calculate distance between two coordinates in meters (Haversine formula)
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
-    const R = 6371e3; // Earth's radius in meters
+    const R = 6371e3;
     const φ1 = lat1 * Math.PI / 180;
     const φ2 = lat2 * Math.PI / 180;
     const Δφ = (lat2 - lat1) * Math.PI / 180;
     const Δλ = (lon2 - lon1) * Math.PI / 180;
-
     const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
               Math.cos(φ1) * Math.cos(φ2) *
               Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-    return R * c; // Distance in meters
+    return R * c;
   };
 
   const handleLogin = async () => {
@@ -1593,7 +1762,7 @@ function LoginScreen({ users, onLogin }) {
     }
     
     const user = users[selectedPhone];
-    const masterPassword = passwords['Admin']; // Master password bypasses everything
+    const masterPassword = passwords['Admin'];
     let expectedPassword = '';
     
     if (user.role === 'outlet') {
@@ -1604,7 +1773,6 @@ function LoginScreen({ users, onLogin }) {
       expectedPassword = passwords['Admin'];
     }
     
-    // Check if using master password (admin password works for everyone)
     const usingMasterPassword = password === masterPassword;
     
     if (password !== expectedPassword && !usingMasterPassword) {
@@ -1620,7 +1788,7 @@ function LoginScreen({ users, onLogin }) {
       try {
         const position = await new Promise((resolve, reject) => {
           if (!navigator.geolocation) {
-            reject(new Error('Geolocation is not supported by your browser'));
+            reject(new Error('Geolocation is not supported'));
             return;
           }
           navigator.geolocation.getCurrentPosition(resolve, reject, {
@@ -1641,7 +1809,7 @@ function LoginScreen({ users, onLogin }) {
         }
 
         const distance = calculateDistance(userLat, userLng, outletCoords.lat, outletCoords.lng);
-        const maxDistance = 30; // ~100 feet in meters
+        const maxDistance = 30;
 
         if (distance > maxDistance) {
           setError(`You must be at ${user.outlet} outlet to login. You are ${Math.round(distance)}m away.`);
@@ -1649,16 +1817,15 @@ function LoginScreen({ users, onLogin }) {
           return;
         }
 
-        // Location verified, proceed with login
         setIsVerifyingLocation(false);
         onLogin(selectedPhone, users[selectedPhone]);
         
       } catch (geoError) {
         setIsVerifyingLocation(false);
         if (geoError.code === 1) {
-          setError('Location access denied. Please enable location services to login.');
+          setError('Location access denied. Please enable location services.');
         } else if (geoError.code === 2) {
-          setError('Unable to determine your location. Please try again.');
+          setError('Unable to determine location. Please try again.');
         } else if (geoError.code === 3) {
           setError('Location request timed out. Please try again.');
         } else {
@@ -1666,73 +1833,74 @@ function LoginScreen({ users, onLogin }) {
         }
       }
     } else {
-      // CK and Admin don't need GPS verification
       onLogin(selectedPhone, users[selectedPhone]);
     }
   };
 
-  const userList = Object.entries(users).map(([phone, user]) => ({
-    phone,
-    ...user,
-    displayName: user.role === 'outlet' ? `${user.outlet} Outlet` : 
-                 user.role === 'central_kitchen' ? 'Central Kitchen' : 'Admin'
-  }));
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-stone-950 via-stone-900 to-amber-950 flex items-center justify-center p-4 overflow-hidden">
+    <div 
+      className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
+      style={{
+        background: 'linear-gradient(135deg, #0f0a19 0%, #1a1025 25%, #1e1230 50%, #150d20 75%, #0d0815 100%)'
+      }}
+    >
       {/* Animated background blobs */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-10 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl animate-blob"></div>
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl animate-blob animation-delay-2000"></div>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-amber-600/5 rounded-full blur-3xl animate-blob animation-delay-4000"></div>
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div 
+          className="absolute top-20 left-10 w-96 h-96 rounded-full blur-3xl animate-pulse"
+          style={{ background: accent.glow, opacity: 0.3 }}
+        ></div>
+        <div 
+          className="absolute bottom-40 right-20 w-80 h-80 rounded-full blur-3xl animate-pulse"
+          style={{ background: 'rgba(236,72,153,0.15)', animationDelay: '1s' }}
+        ></div>
+        <div 
+          className="absolute top-1/2 left-1/3 w-72 h-72 rounded-full blur-3xl animate-pulse"
+          style={{ background: 'rgba(34,211,238,0.1)', animationDelay: '2s' }}
+        ></div>
       </div>
 
-      <div className="relative w-full max-w-md animate-slide-up">
+      <div className="relative w-full max-w-md">
         {/* Logo & Title */}
         <div className="text-center mb-8">
           <div 
-            className="inline-flex items-center justify-center w-24 h-24 rounded-3xl mb-4 animate-pulse-glow"
+            className="inline-flex items-center justify-center w-20 h-20 rounded-2xl mb-4 transition-all duration-500"
             style={{
-              background: 'linear-gradient(135deg, rgba(41,37,36,0.95) 0%, rgba(28,25,23,0.9) 100%)',
-              border: '1px solid rgba(68,64,60,0.5)',
-              boxShadow: '0 16px 48px rgba(0,0,0,0.3), 0 0 30px rgba(251,191,36,0.2)'
+              background: accent.gradient,
+              boxShadow: `0 0 40px ${accent.glow}`
             }}
           >
-            <svg className="w-12 h-12 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z" />
             </svg>
           </div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">
-            YOKO SIZZLERS
-          </h1>
-          <p className="text-amber-200/60 mt-2 text-sm tracking-widest uppercase">Purchase Order System</p>
+          <h1 className="text-3xl font-bold text-white tracking-tight" style={{ fontFamily: "'Montserrat', sans-serif" }}>YOKO SIZZLERS</h1>
+          <p className="text-violet-400/50 mt-2 text-sm">Purchase Order System</p>
         </div>
 
-        {/* Login Card - Liquid Glass */}
+        {/* Login Card */}
         <div 
-          className="p-8 animate-scale-in"
+          className="p-6 rounded-2xl backdrop-blur-xl transition-all duration-500"
           style={{
-            background: 'linear-gradient(135deg, rgba(41,37,36,0.95) 0%, rgba(28,25,23,0.9) 100%)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-            borderRadius: '24px',
-            border: '1px solid rgba(68,64,60,0.5)',
-            boxShadow: '0 16px 48px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.2), inset 0 1px 2px rgba(255,255,255,0.05)'
+            background: 'linear-gradient(135deg, rgba(30,20,45,0.8) 0%, rgba(25,15,40,0.6) 100%)',
+            border: `1px solid ${selectedPhone ? accent.primary + '40' : 'rgba(139,92,246,0.2)'}`,
+            boxShadow: selectedPhone ? `0 8px 32px ${accent.glow}` : '0 8px 32px rgba(0,0,0,0.3)'
           }}
         >
           <h2 className="text-xl font-semibold text-white mb-6">Sign In</h2>
-          <div className="space-y-5">
+          
+          <div className="space-y-4">
+            {/* User Select */}
             <div>
-              <label className="block text-sm text-stone-400 mb-2 font-medium">Select User</label>
+              <label className="block text-sm text-violet-300/70 mb-2">Select User</label>
               <select
                 value={selectedPhone}
                 onChange={(e) => { setSelectedPhone(e.target.value); setError(''); setPassword(''); }}
-                className="w-full px-4 py-3.5 rounded-xl text-white outline-none transition-all cursor-pointer"
+                className="w-full px-4 py-3 rounded-xl text-white outline-none transition-all cursor-pointer"
                 style={{
-                  background: 'rgba(41,37,36,0.8)',
-                  border: '1px solid rgba(68,64,60,0.5)',
-                  boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.1)'
+                  background: 'rgba(30,20,45,0.6)',
+                  border: `1px solid ${selectedPhone ? accent.primary + '50' : 'rgba(139,92,246,0.3)'}`,
                 }}
               >
                 <option value="">-- Select User --</option>
@@ -1744,83 +1912,67 @@ function LoginScreen({ users, onLogin }) {
               </select>
             </div>
             
+            {/* Password Input */}
             {selectedPhone && (
-              <>
-                <div 
-                  className="p-4 rounded-xl animate-slide-up"
-                  style={{
-                    background: 'rgba(41,37,36,0.6)',
-                    border: '1px solid rgba(68,64,60,0.4)',
-                  }}
-                >
-                  <p className="text-xs text-stone-500 mb-1">Logging in as:</p>
-                  <p className="text-white font-medium">{users[selectedPhone].name}</p>
-                  <p className="text-sm text-stone-400">+91 {selectedPhone}</p>
-                  {users[selectedPhone].role === 'outlet' && (
-                    <p className="text-xs text-amber-400 mt-2 flex items-center gap-1">
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              <div>
+                <label className="block text-sm text-violet-300/70 mb-2">Password</label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => { setPassword(e.target.value); setError(''); }}
+                    placeholder="Enter password"
+                    className="w-full px-4 py-3 rounded-xl text-white placeholder-violet-400/30 outline-none transition-all pr-12"
+                    style={{
+                      background: 'rgba(30,20,45,0.6)',
+                      border: `1px solid ${accent.primary}30`,
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = accent.primary + '60'}
+                    onBlur={(e) => e.target.style.borderColor = accent.primary + '30'}
+                    onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-violet-400/50 hover:text-violet-300 transition-colors"
+                  >
+                    {showPassword ? (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
                       </svg>
-                      GPS verification required
-                    </p>
-                  )}
+                    ) : (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    )}
+                  </button>
                 </div>
-                
-                <div className="animate-slide-up">
-                  <label className="block text-sm text-stone-400 mb-2 font-medium">Password</label>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      value={password}
-                      onChange={(e) => { setPassword(e.target.value); setError(''); }}
-                      placeholder="Enter password"
-                      className="w-full px-4 py-3.5 rounded-xl text-white placeholder-stone-500 outline-none transition-all pr-12"
-                      style={{
-                        background: 'rgba(41,37,36,0.8)',
-                        border: '1px solid rgba(68,64,60,0.5)',
-                        boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.1)'
-                      }}
-                      onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-500 hover:text-amber-400 transition-colors"
-                    >
-                      {showPassword ? (
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                        </svg>
-                      ) : (
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              </>
+              </div>
             )}
 
+            {/* Error Message */}
             {error && (
-              <p className="text-red-400 text-sm flex items-center gap-2 animate-shake">
+              <p className="text-rose-400 text-sm flex items-center gap-2">
                 <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                 </svg>
                 {error}
               </p>
             )}
+
+            {/* Login Button */}
             <button
               onClick={handleLogin}
               disabled={!selectedPhone || !password || isVerifyingLocation}
-              className={`w-full py-4 rounded-xl font-semibold text-white flex items-center justify-center gap-2 transition-all ${
-                (!selectedPhone || !password || isVerifyingLocation) ? 'opacity-50 cursor-not-allowed' : 'hover:translate-y-[-2px] active:scale-[0.98]'
+              className={`w-full py-3 rounded-xl font-semibold text-white flex items-center justify-center gap-2 transition-all ${
+                (!selectedPhone || !password || isVerifyingLocation) 
+                  ? 'opacity-50 cursor-not-allowed' 
+                  : 'hover:-translate-y-0.5 active:scale-[0.98]'
               }`}
               style={{
-                background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
-                boxShadow: '0 4px 16px rgba(251,191,36,0.4), inset 0 2px 4px rgba(255,255,255,0.2)'
+                background: accent.gradient,
+                boxShadow: (!selectedPhone || !password || isVerifyingLocation) ? 'none' : `0 4px 20px ${accent.glow}`
               }}
             >
               {isVerifyingLocation ? (
@@ -1849,7 +2001,7 @@ function LoginScreen({ users, onLogin }) {
 // ============================================
 // HEADER COMPONENT
 // ============================================
-function Header({ user, onLogout }) {
+function Header({ user, onLogout, accent }) {
   const getRoleBadge = (role) => {
     const badges = {
       outlet: { label: user.outlet, color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' },
@@ -1862,33 +2014,51 @@ function Header({ user, onLogout }) {
   const badge = getRoleBadge(user.role);
 
   return (
-    <header className="glass-header-dark sticky top-0 z-50">
+    <header className="sticky top-0 z-50" style={{
+      background: 'linear-gradient(135deg, rgba(30,20,45,0.95) 0%, rgba(20,15,35,0.9) 100%)',
+      backdropFilter: 'blur(20px)',
+      WebkitBackdropFilter: 'blur(20px)',
+      borderBottom: `1px solid ${accent.primary}30`,
+      boxShadow: '0 4px 30px rgba(0,0,0,0.3)'
+    }}>
       <div className="max-w-7xl mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl glass-card-dark flex items-center justify-center shadow-lg shadow-amber-500/10 animate-pulse-glow">
-                <svg className="w-6 h-6 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{
+                background: accent.gradient,
+                boxShadow: `0 0 30px ${accent.glow}`
+              }}>
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
                 </svg>
               </div>
               <div>
-                <h1 className="text-lg font-bold text-white">YOKO SIZZLERS</h1>
-                <p className="text-xs text-stone-500">Purchase Orders</p>
+                <h1 className="text-lg font-bold text-white" style={{ fontFamily: "'Montserrat', sans-serif" }}>YOKO SIZZLERS</h1>
+                <p className="text-xs" style={{ color: `${accent.primary}90` }}>Purchase Orders</p>
               </div>
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <span className={`glass-badge ${badge.color}`}>
+            <span className="px-3 py-1.5 rounded-lg text-xs font-medium" style={{
+              background: `rgba(${accent.rgb},0.2)`,
+              color: accent.primary,
+              border: `1px solid ${accent.primary}40`
+            }}>
               {badge.label}
             </span>
             <div className="hidden sm:block text-right">
               <p className="text-sm text-white font-medium">{user.name}</p>
-              <p className="text-xs text-stone-500">+91 {user.phone}</p>
+              <p className="text-xs" style={{ color: `${accent.primary}80` }}>+91 {user.phone}</p>
             </div>
             <button
               onClick={onLogout}
-              className="p-2.5 glass-card-dark text-stone-400 hover:text-amber-400 rounded-xl transition-all hover:scale-105"
+              className="p-2.5 rounded-xl transition-all hover:scale-105"
+              style={{
+                background: `rgba(${accent.rgb},0.1)`,
+                border: `1px solid ${accent.primary}30`,
+                color: `${accent.primary}90`
+              }}
               title="Logout"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1905,7 +2075,7 @@ function Header({ user, onLogout }) {
 // ============================================
 // OUTLET DASHBOARD
 // ============================================
-function OutletDashboard({ user, items, categories, orders, onAddOrder, onUpdateOrderStatus, onUpdateStockOut, globalStockOutHistory }) {
+function OutletDashboard({ user, items, categories, orders, onAddOrder, onUpdateOrderStatus, onUpdateStockOut, globalStockOutHistory, accent }) {
   const [activeTab, setActiveTab] = useState('overview');
   const [orderStep, setOrderStep] = useState('categories'); // 'categories' | 'items'
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
@@ -3590,7 +3760,7 @@ function OutletDashboard({ user, items, categories, orders, onAddOrder, onUpdate
 // ============================================
 // CENTRAL KITCHEN DASHBOARD
 // ============================================
-function CentralKitchenDashboard({ user, items, categories, orders, revenueData, onUpdateItems, onUpdateCategories, onUpdateOrderStatus, onUpdateOrder, globalStockOutHistory }) {
+function CentralKitchenDashboard({ user, items, categories, orders, revenueData, onUpdateItems, onUpdateCategories, onUpdateOrderStatus, onUpdateOrder, globalStockOutHistory, accent }) {
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedOutlet, setSelectedOutlet] = useState('All');
   const [priceEditing, setPriceEditing] = useState(null);
@@ -6344,7 +6514,7 @@ If you cannot extract prices or the PDF is not a price list, return: []`
 // ============================================
 // ADMIN DASHBOARD
 // ============================================
-function AdminDashboard({ data, onUpdateItems, onUpdateRevenueData }) {
+function AdminDashboard({ data, onUpdateItems, onUpdateRevenueData, accent }) {
   const [activeTab, setActiveTab] = useState('overview');
   const [dateRange, setDateRange] = useState('month');
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
