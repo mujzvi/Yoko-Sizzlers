@@ -6787,9 +6787,13 @@ function AdminDashboard({ data, onUpdateItems, onUpdateRevenueData, accent }) {
               onClick={() => setDateRange(range.key)}
               className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
                 dateRange === range.key
-                  ? 'bg-amber-500 text-white'
-                  : 'bg-stone-800 text-stone-400 hover:bg-stone-700'
+                  ? 'text-white'
+                  : 'bg-stone-800/50 text-stone-400 hover:bg-stone-700/50'
               }`}
+              style={dateRange === range.key ? {
+                background: 'var(--accent-gradient)',
+                boxShadow: '0 4px 15px var(--accent-glow)'
+              } : {}}
             >
               {range.label}
             </button>
@@ -6803,15 +6807,17 @@ function AdminDashboard({ data, onUpdateItems, onUpdateRevenueData, accent }) {
           title="Total Orders" 
           value={filteredOrders.length}
           icon="📋"
-          color="amber"
+          color="accent"
           onClick={() => setActiveTab('orders')}
+          accent={accent}
         />
         <div onClick={() => setActiveTab('spendTracker')} className="cursor-pointer">
         <StatCard 
           title="Total Spend" 
           value={formatCurrency(totalSpend)}
           icon="💰"
-          color="emerald"
+          color="accent"
+          accent={accent}
         />
         </div>
         <div onClick={() => { setActiveTab('orders'); }} className="cursor-pointer">
@@ -6819,7 +6825,8 @@ function AdminDashboard({ data, onUpdateItems, onUpdateRevenueData, accent }) {
           title="Pending" 
           value={filteredOrders.filter(o => o.status === 'pending').length}
           icon="⏳"
-          color="blue"
+          color="accent"
+          accent={accent}
         />
         </div>
         <div onClick={() => setActiveTab('orders')} className="cursor-pointer">
@@ -6827,7 +6834,8 @@ function AdminDashboard({ data, onUpdateItems, onUpdateRevenueData, accent }) {
           title="Delivered" 
           value={filteredOrders.filter(o => o.status === 'delivered' || o.status === 'completed').length}
           icon="✅"
-          color="purple"
+          color="accent"
+          accent={accent}
         />
         </div>
       </div>
@@ -6850,13 +6858,13 @@ function AdminDashboard({ data, onUpdateItems, onUpdateRevenueData, accent }) {
           Monthly Spending
         </TabButton>
         <TabButton active={activeTab === 'reports'} onClick={() => setActiveTab('reports')}>
-          📊 Reports
+          Reports
         </TabButton>
         <TabButton active={activeTab === 'dispatchTime'} onClick={() => setActiveTab('dispatchTime')}>
-          🚚 Dispatch Time
+          Dispatch Time
         </TabButton>
         <TabButton active={activeTab === 'ai'} onClick={() => setActiveTab('ai')}>
-          🤖 AI Insights {(totalOverOrderingAlerts + vendorPriceAlerts.length) > 0 && (
+          AI Insights {(totalOverOrderingAlerts + vendorPriceAlerts.length) > 0 && (
             <span className="ml-1 px-1.5 py-0.5 bg-red-500 text-white text-xs rounded-full">
               {totalOverOrderingAlerts + vendorPriceAlerts.length}
             </span>
@@ -6998,9 +7006,13 @@ function AdminDashboard({ data, onUpdateItems, onUpdateRevenueData, accent }) {
                     onClick={() => setSelectedMonth(month.value)}
                     className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
                       selectedMonth === month.value
-                        ? 'bg-amber-500 text-white'
-                        : 'bg-stone-800 text-stone-400 hover:bg-stone-700'
+                        ? 'text-white'
+                        : 'bg-stone-800/50 text-stone-400 hover:bg-stone-700/50'
                     }`}
+                    style={selectedMonth === month.value ? {
+                      background: 'var(--accent-gradient)',
+                      boxShadow: '0 4px 15px var(--accent-glow)'
+                    } : {}}
                   >
                     {month.label.slice(0, 3)}
                   </button>
@@ -7011,7 +7023,7 @@ function AdminDashboard({ data, onUpdateItems, onUpdateRevenueData, accent }) {
 
           {/* Revenue & Budget Management */}
           <div className="glass-card-dark p-6">
-            <h3 className="text-lg font-semibold text-amber-400 mb-2 flex items-center gap-2">
+            <h3 className="text-lg font-semibold mb-2 flex items-center gap-2" style={{ color: accent.primary }}>
               <span>💰</span> Revenue & Budget Management - {months.find(m => m.value === selectedMonth)?.label}
             </h3>
             <p className="text-sm text-stone-500 mb-6">
@@ -7087,7 +7099,13 @@ function AdminDashboard({ data, onUpdateItems, onUpdateRevenueData, accent }) {
                           ) : (
                             <button
                               onClick={() => { setEditingRevenue(editKey); setNewRevenue(revenue.toString()); }}
-                              className="px-4 py-1.5 bg-amber-500/20 text-amber-400 text-sm rounded-lg hover:bg-amber-500/30"
+                              className="px-4 py-1.5 text-sm rounded-lg transition-all"
+                              style={{
+                                background: `rgba(${accent.rgb},0.2)`,
+                                color: accent.primary
+                              }}
+                              onMouseEnter={(e) => e.target.style.background = `rgba(${accent.rgb},0.3)`}
+                              onMouseLeave={(e) => e.target.style.background = `rgba(${accent.rgb},0.2)`}
                             >
                               Edit Revenue
                             </button>
@@ -7300,9 +7318,13 @@ function AdminDashboard({ data, onUpdateItems, onUpdateRevenueData, accent }) {
                     onClick={() => setSelectedMonth(month.value)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                       selectedMonth === month.value
-                        ? 'bg-amber-500 text-white'
-                        : 'bg-stone-800 text-stone-400 hover:bg-stone-700'
+                        ? 'text-white'
+                        : 'bg-stone-800/50 text-stone-400 hover:bg-stone-700/50'
                     }`}
+                    style={selectedMonth === month.value ? {
+                      background: 'var(--accent-gradient)',
+                      boxShadow: '0 4px 15px var(--accent-glow)'
+                    } : {}}
                   >
                     {month.label.slice(0, 3)}
                   </button>
@@ -9400,13 +9422,14 @@ function AdminDashboard({ data, onUpdateItems, onUpdateRevenueData, accent }) {
 // ============================================
 // SHARED COMPONENTS
 // ============================================
-function StatCard({ title, value, icon, color }) {
+function StatCard({ title, value, icon, color, accent }) {
   const colors = {
     amber: 'border-amber-500/30',
     blue: 'border-blue-500/30',
     emerald: 'border-emerald-500/30',
     purple: 'border-purple-500/30',
     red: 'border-red-500/30',
+    accent: '', // Will use inline style
   };
   
   const iconColors = {
@@ -9415,11 +9438,20 @@ function StatCard({ title, value, icon, color }) {
     emerald: 'from-emerald-500/20 to-teal-500/20',
     purple: 'from-purple-500/20 to-pink-500/20',
     red: 'from-red-500/20 to-rose-500/20',
+    accent: '', // Will use inline style
   };
 
+  const useAccent = color === 'accent' && accent;
+
   return (
-    <div className={`glass-stat-card-dark ${colors[color]} animate-scale-in`}>
-      <div className={`glass-icon-dark bg-gradient-to-br ${iconColors[color]}`}>
+    <div 
+      className={`glass-stat-card-dark ${!useAccent ? colors[color] : ''} animate-scale-in`}
+      style={useAccent ? { borderColor: `rgba(${accent.rgb},0.3)` } : {}}
+    >
+      <div 
+        className={`glass-icon-dark ${!useAccent ? `bg-gradient-to-br ${iconColors[color]}` : ''}`}
+        style={useAccent ? { background: `rgba(${accent.rgb},0.2)` } : {}}
+      >
         <span className="text-2xl">{icon}</span>
       </div>
       <div>
