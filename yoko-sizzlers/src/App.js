@@ -204,11 +204,11 @@ function GlobalStyles() {
       }
       
       .glass-card-dark {
-        background: linear-gradient(135deg, rgba(41,37,36,0.95) 0%, rgba(28,25,23,0.9) 100%);
+        background: linear-gradient(135deg, rgba(30,20,45,0.8) 0%, rgba(25,15,40,0.6) 100%);
         backdrop-filter: blur(20px);
         -webkit-backdrop-filter: blur(20px);
         border-radius: 24px;
-        border: 1px solid rgba(68,64,60,0.5);
+        border: 1px solid rgba(var(--accent-rgb, 139,92,246),0.2);
         box-shadow: 
           0 16px 48px rgba(0,0,0,0.3),
           0 4px 16px rgba(0,0,0,0.2),
@@ -219,9 +219,9 @@ function GlobalStyles() {
       .glass-card-dark:hover {
         box-shadow: 
           0 24px 64px rgba(0,0,0,0.4),
-          0 8px 24px rgba(0,0,0,0.25),
+          0 8px 24px rgba(var(--accent-rgb, 139,92,246),0.15),
           inset 0 1px 2px rgba(255,255,255,0.08);
-        border-color: rgba(251,191,36,0.3);
+        border-color: rgba(var(--accent-rgb, 139,92,246),0.4);
       }
       
       .glass-input {
@@ -260,9 +260,9 @@ function GlobalStyles() {
       }
       .glass-input-dark:focus {
         background: rgba(41,37,36,0.8);
-        border-color: rgba(251,191,36,0.5);
+        border-color: var(--accent-primary, #8b5cf6);
         box-shadow: 
-          0 0 0 4px rgba(251,191,36,0.15),
+          0 0 0 4px rgba(var(--accent-rgb, 139,92,246),0.15),
           inset 0 2px 4px rgba(0,0,0,0.1);
       }
       .glass-input-dark::placeholder {
@@ -297,7 +297,7 @@ function GlobalStyles() {
       .glass-button-primary {
         position: relative;
         padding: 14px 24px;
-        background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+        background: var(--accent-gradient, linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%));
         border: none;
         border-radius: 16px;
         color: white;
@@ -306,14 +306,14 @@ function GlobalStyles() {
         overflow: hidden;
         transition: all 0.3s ease;
         box-shadow: 
-          0 4px 16px rgba(251,191,36,0.4),
+          0 4px 16px var(--accent-glow, rgba(139,92,246,0.4)),
           inset 0 2px 4px rgba(255,255,255,0.3),
           inset 0 -2px 4px rgba(0,0,0,0.1);
       }
       .glass-button-primary:hover {
         transform: translateY(-2px);
         box-shadow: 
-          0 8px 24px rgba(251,191,36,0.5),
+          0 8px 24px var(--accent-glow, rgba(139,92,246,0.5)),
           inset 0 2px 4px rgba(255,255,255,0.3);
       }
       .glass-button-primary:active {
@@ -435,10 +435,10 @@ function GlobalStyles() {
         color: #44403c;
       }
       .glass-tab.active {
-        background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+        background: var(--accent-gradient, linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%));
         color: white;
         box-shadow: 
-          0 4px 16px rgba(251,191,36,0.4),
+          0 4px 16px var(--accent-glow, rgba(139,92,246,0.4)),
           inset 0 2px 4px rgba(255,255,255,0.2);
       }
       
@@ -450,7 +450,7 @@ function GlobalStyles() {
         color: #e7e5e4;
       }
       .glass-tab-dark.active {
-        background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+        background: var(--accent-gradient, linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%));
         color: white;
       }
       
@@ -1637,7 +1637,11 @@ export default function YokoSizzlersApp() {
 
   return (
     <div className="min-h-screen relative overflow-hidden" style={{
-      background: 'linear-gradient(135deg, #0f0a19 0%, #1a1025 25%, #1e1230 50%, #150d20 75%, #0d0815 100%)'
+      background: 'linear-gradient(135deg, #0f0a19 0%, #1a1025 25%, #1e1230 50%, #150d20 75%, #0d0815 100%)',
+      '--accent-gradient': accent.gradient,
+      '--accent-glow': accent.glow,
+      '--accent-primary': accent.primary,
+      '--accent-rgb': accent.rgb
     }}>
       {/* Animated background blobs - colored based on user */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
