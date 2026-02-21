@@ -2116,14 +2116,20 @@ function OutletDashboard({ user, items, categories, orders, onAddOrder, onUpdate
   // Confirmation dialog state
   const [showConfirmDialog, setShowConfirmDialog] = useState(null); // 'order' | 'stockOut' | null
 
-  // Check if stock out can be submitted today (before 2am IST)
+  // Check if stock out can be submitted (10pm to 2am IST window)
   const canSubmitStockOut = () => {
     const now = new Date();
     const istOffset = 5.5 * 60 * 60 * 1000; // IST is UTC+5:30
     const istNow = new Date(now.getTime() + istOffset);
     const hours = istNow.getUTCHours();
+    const minutes = istNow.getUTCMinutes();
     
-    // Day ends at 2am IST - if it's past 2am, we're in a new day
+    // Window: 10pm (22:00) to 2am (02:00) IST
+    // Hours 22, 23, 0, 1 are valid (before 2am)
+    const isInWindow = hours >= 22 || hours < 2;
+    
+    // Calculate effective date (the business day we're submitting for)
+    // Before 2am = yesterday's date, After 2am = today's date
     const effectiveDate = hours < 2 
       ? new Date(istNow.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0]
       : istNow.toISOString().split('T')[0];
@@ -2131,7 +2137,44 @@ function OutletDashboard({ user, items, categories, orders, onAddOrder, onUpdate
     // Check if already submitted for this effective date
     const alreadySubmitted = stockOutHistory.some(entry => entry.effectiveDate === effectiveDate);
     
-    return { canSubmit: !alreadySubmitted, effectiveDate, alreadySubmitted };
+    // Calculate time until window opens (if before 10pm)
+    let timeUntilOpen = null;
+    if (hours < 22 && hours >= 2) {
+      const hoursUntil = 22 - hours - 1;
+      const minsUntil = 60 - minutes;
+      timeUntilOpen = `${hoursUntil}h ${minsUntil}m`;
+    }
+    
+    // Calculate time until deadline (if in window)
+    let timeUntilDeadline = null;
+    if (isInWindow && !alreadySubmitted) {
+      if (hours >= 22) {
+        // Between 10pm and midnight
+        const hoursUntil = (24 - hours) + 2 - 1;
+        const minsUntil = 60 - minutes;
+        timeUntilDeadline = `${hoursUntil}h ${minsUntil}m`;
+      } else {
+        // Between midnight and 2am
+        const hoursUntil = 2 - hours - 1;
+        const minsUntil = 60 - minutes;
+        timeUntilDeadline = `${hoursUntil}h ${minsUntil}m`;
+      }
+    }
+    
+    // Format current IST time
+    const currentTimeIST = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} IST`;
+    
+    return { 
+      canSubmit: isInWindow && !alreadySubmitted, 
+      effectiveDate, 
+      alreadySubmitted,
+      isInWindow,
+      timeUntilOpen,
+      timeUntilDeadline,
+      currentTimeIST,
+      windowStart: '10:00 PM',
+      windowEnd: '2:00 AM'
+    };
   };
 
   // Stock management state
@@ -3180,27 +3223,92 @@ function OutletDashboard({ user, items, categories, orders, onAddOrder, onUpdate
       {activeTab === 'stockOut' && (
         <div className="space-y-6">
           {(() => {
-            const { canSubmit, effectiveDate, alreadySubmitted } = canSubmitStockOut();
+            const { canSubmit, effectiveDate, alreadySubmitted, isInWindow, timeUntilOpen, timeUntilDeadline, currentTimeIST, windowStart, windowEnd } = canSubmitStockOut();
             const todayEntry = stockOutHistory.find(e => e.effectiveDate === effectiveDate);
 
             return (
               <>
-                {/* Info Card */}
-                <div className={`border rounded-2xl p-6 ${alreadySubmitted ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-amber-500/10 border-amber-500/30'}`}>
+                {/* Time Window Info Card */}
+                <div 
+                  className="border rounded-2xl p-6"
+                  style={{
+                    background: alreadySubmitted 
+                      ? 'rgba(16,185,129,0.1)' 
+                      : isInWindow 
+                        ? `rgba(${accent.rgb},0.1)` 
+                        : 'rgba(239,68,68,0.1)',
+                    borderColor: alreadySubmitted 
+                      ? 'rgba(16,185,129,0.3)' 
+                      : isInWindow 
+                        ? `rgba(${accent.rgb},0.3)` 
+                        : 'rgba(239,68,68,0.3)'
+                  }}
+                >
                   <div className="flex items-start gap-4">
-                    <span className="text-3xl">{alreadySubmitted ? '✅' : '📤'}</span>
-                    <div>
-                      <h3 className={`text-lg font-semibold ${alreadySubmitted ? 'text-emerald-400' : 'text-amber-400'}`}>
-                        {alreadySubmitted ? 'Stock Out Submitted' : 'Daily Stock Out Entry'}
+                    <span className="text-3xl">
+                      {alreadySubmitted ? '✅' : isInWindow ? '📤' : '🔒'}
+                    </span>
+                    <div className="flex-1">
+                      <h3 
+                        className="text-lg font-semibold"
+                        style={{ 
+                          color: alreadySubmitted 
+                            ? '#34d399' 
+                            : isInWindow 
+                              ? accent.primary 
+                              : '#f87171' 
+                        }}
+                      >
+                        {alreadySubmitted 
+                          ? 'Stock Out Submitted' 
+                          : isInWindow 
+                            ? 'Daily Stock Out Entry' 
+                            : 'Stock Out Window Closed'}
                       </h3>
                       <p className="text-sm text-stone-400 mt-1">
                         {alreadySubmitted 
                           ? `Stock out for ${effectiveDate} was submitted at ${todayEntry ? formatDate(todayEntry.submittedAt) : ''}`
-                          : `Enter remaining stock at end of day. Deadline: 2:00 AM IST`
+                          : isInWindow
+                            ? `Enter remaining stock for ${effectiveDate}. Submit before deadline.`
+                            : `Stock out can only be submitted between ${windowStart} and ${windowEnd} IST`
                         }
                       </p>
-                      <p className="text-xs text-stone-500 mt-2">
-                        ⚠️ Stock out can only be submitted once per day and cannot be edited after submission.
+                      
+                      {/* Time Display */}
+                      <div className="flex flex-wrap items-center gap-4 mt-4">
+                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-stone-800/50">
+                          <span className="text-stone-500 text-sm">Current Time:</span>
+                          <span className="text-white font-mono font-medium">{currentTimeIST}</span>
+                        </div>
+                        
+                        {!alreadySubmitted && (
+                          <>
+                            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-stone-800/50">
+                              <span className="text-stone-500 text-sm">Window:</span>
+                              <span className="font-medium" style={{ color: accent.primary }}>{windowStart}</span>
+                              <span className="text-stone-500">→</span>
+                              <span className="text-red-400 font-medium">{windowEnd}</span>
+                            </div>
+                            
+                            {isInWindow && timeUntilDeadline && (
+                              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30">
+                                <span className="text-red-400 text-sm">⏰ Deadline in:</span>
+                                <span className="text-red-400 font-mono font-bold">{timeUntilDeadline}</span>
+                              </div>
+                            )}
+                            
+                            {!isInWindow && timeUntilOpen && (
+                              <div className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: `rgba(${accent.rgb},0.1)`, border: `1px solid rgba(${accent.rgb},0.3)` }}>
+                                <span className="text-sm" style={{ color: accent.primary }}>🕙 Opens in:</span>
+                                <span className="font-mono font-bold" style={{ color: accent.primary }}>{timeUntilOpen}</span>
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                      
+                      <p className="text-xs text-stone-500 mt-3">
+                        ⚠️ Stock out can only be submitted once per day between {windowStart} - {windowEnd} IST and cannot be edited after submission.
                       </p>
                     </div>
                   </div>
@@ -3236,12 +3344,38 @@ function OutletDashboard({ user, items, categories, orders, onAddOrder, onUpdate
                       </table>
                     </div>
                   </div>
+                ) : !isInWindow ? (
+                  /* Window Closed Message */
+                  <div className="glass-card-dark p-8 text-center">
+                    <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-red-500/20 flex items-center justify-center">
+                      <svg className="w-10 h-10 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-xl font-semibold text-white mb-2">Submission Window Closed</h3>
+                    <p className="text-stone-400 mb-4">
+                      Stock out entries can only be submitted between <span className="font-semibold" style={{ color: accent.primary }}>{windowStart}</span> and <span className="text-red-400 font-semibold">{windowEnd} IST</span>
+                    </p>
+                    {timeUntilOpen && (
+                      <p className="text-stone-500">
+                        Window opens in <span className="font-mono font-bold" style={{ color: accent.primary }}>{timeUntilOpen}</span>
+                      </p>
+                    )}
+                  </div>
                 ) : (
                   /* Stock Out Entry Form */
                   <div className="glass-card-dark overflow-hidden">
-                    <div className="p-4 bg-stone-800/30 border-b border-stone-800/50">
-                      <h3 className="text-lg font-semibold text-white">Enter Remaining Stock</h3>
-                      <p className="text-sm text-stone-400">Enter the quantity remaining for each item at end of day</p>
+                    <div className="p-4 bg-stone-800/30 border-b border-stone-800/50 flex items-center justify-between">
+                      <div>
+                        <h3 className="text-lg font-semibold text-white">Enter Remaining Stock</h3>
+                        <p className="text-sm text-stone-400">Enter the quantity remaining for each item at end of day</p>
+                      </div>
+                      {timeUntilDeadline && (
+                        <div className="px-4 py-2 rounded-lg bg-red-500/20 border border-red-500/30">
+                          <p className="text-xs text-red-400">Deadline in</p>
+                          <p className="text-lg font-mono font-bold text-red-400">{timeUntilDeadline}</p>
+                        </div>
+                      )}
                     </div>
                     <div className="overflow-x-auto">
                       <table className="w-full">
